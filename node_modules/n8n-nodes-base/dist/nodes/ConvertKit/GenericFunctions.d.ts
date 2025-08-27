@@ -1,0 +1,3 @@
+import type { IExecuteFunctions, ILoadOptionsFunctions, IDataObject, IHookFunctions, IHttpRequestMethods } from 'n8n-workflow';
+export declare function convertKitApiRequest(this: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions, method: IHttpRequestMethods, endpoint: string, body?: any, qs?: IDataObject, uri?: string, option?: IDataObject): Promise<any>;
+//# sourceMappingURL=GenericFunctions.d.ts.map

@@ -1,0 +1,1 @@
+export declare const OUTPUT_FORMAT = "\n## Output Format\nReturn ONLY the complete updated parameters object that matches the node's parameter structure. Include ALL parameters, both modified and unmodified.";

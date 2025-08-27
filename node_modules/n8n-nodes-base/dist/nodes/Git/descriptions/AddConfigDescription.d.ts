@@ -1,0 +1,3 @@
+import type { INodeProperties } from 'n8n-workflow';
+export declare const addConfigFields: INodeProperties[];
+//# sourceMappingURL=AddConfigDescription.d.ts.map

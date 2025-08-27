@@ -1,0 +1,41 @@
+import type { FrontendSettings } from '@n8n/api-types';
+import { LicenseState, Logger, ModuleRegistry } from '@n8n/backend-common';
+import { GlobalConfig, SecurityConfig } from '@n8n/config';
+import { BinaryDataConfig, InstanceSettings } from 'n8n-core';
+import { CredentialTypes } from '../credential-types';
+import { CredentialsOverwrites } from '../credentials-overwrites';
+import { License } from '../license';
+import { LoadNodesAndCredentials } from '../load-nodes-and-credentials';
+import { MfaService } from '../mfa/mfa.service';
+import { PushConfig } from '../push/push.config';
+import { UserManagementMailer } from '../user-management/email';
+import { UrlService } from './url.service';
+export declare class FrontendService {
+    private readonly globalConfig;
+    private readonly logger;
+    private readonly loadNodesAndCredentials;
+    private readonly credentialTypes;
+    private readonly credentialsOverwrites;
+    private readonly license;
+    private readonly mailer;
+    private readonly instanceSettings;
+    private readonly urlService;
+    private readonly securityConfig;
+    private readonly pushConfig;
+    private readonly binaryDataConfig;
+    private readonly licenseState;
+    private readonly moduleRegistry;
+    private readonly mfaService;
+    settings: FrontendSettings;
+    private communityPackagesService?;
+    constructor(globalConfig: GlobalConfig, logger: Logger, loadNodesAndCredentials: LoadNodesAndCredentials, credentialTypes: CredentialTypes, credentialsOverwrites: CredentialsOverwrites, license: License, mailer: UserManagementMailer, instanceSettings: InstanceSettings, urlService: UrlService, securityConfig: SecurityConfig, pushConfig: PushConfig, binaryDataConfig: BinaryDataConfig, licenseState: LicenseState, moduleRegistry: ModuleRegistry, mfaService: MfaService);
+    private collectEnvFeatureFlags;
+    private initSettings;
+    generateTypes(): Promise<void>;
+    getSettings(): FrontendSettings;
+    getModuleSettings(): {
+        [k: string]: import("@n8n/decorators").ModuleSettings;
+    };
+    private writeStaticJSON;
+    private overwriteCredentialsProperties;
+}

@@ -1,0 +1,8 @@
+import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+export declare class SentryIoApi implements ICredentialType {
+    name: string;
+    displayName: string;
+    documentationUrl: string;
+    properties: INodeProperties[];
+}
+//# sourceMappingURL=SentryIoApi.credentials.d.ts.map

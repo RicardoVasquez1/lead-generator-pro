@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Leads Automation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 1.1rem;
+            margin-bottom: 24px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #dcfce7;
+            color: #166534;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .buttons-grid {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .stat-card.total { --accent-color: #3b82f6; }
+        .stat-card.qualified { --accent-color: #22c55e; }
+        .stat-card.process { --accent-color: #f59e0b; }
+        .stat-card.conversion { --accent-color: #ef4444; }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+        }
+        
+        .stat-change {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            height: 350px;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8fafc;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .table-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .table-subtitle {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 16px 24px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .lead-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .lead-company {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .badge-approaching {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-qualified {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-cold {
+            background: #f1f5f9;
+            color: #475569;
+        }
+        
+        .score {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .score-high { color: #22c55e; }
+        .score-medium { color: #f59e0b; }
+        .score-low { color: #ef4444; }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.success { background: #22c55e; }
+        .notification.error { background: #ef4444; }
+        .notification.info { background: #3b82f6; }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .buttons-grid {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Demo Leads Automation</h1>
+            <p>Intelligent lead generation and qualification automation</p>
+            
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                System connected to Google Sheets
+            </div>
+            
+            <div class="buttons-grid">
+                <button id="refreshBtn" class="btn btn-primary">Sync Data</button>
+                <button id="processBtn" class="btn btn-secondary">Process Leads</button>
+                <button id="reportBtn" class="btn btn-secondary">Generate Report</button>
+                <button id="exportBtn" class="btn btn-secondary">Export CSV</button>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-label">Total Leads</div>
+                <div class="stat-number" id="totalLeads">-</div>
+                <div class="stat-change">Complete database</div>
+            </div>
+            
+            <div class="stat-card qualified">
+                <div class="stat-label">Qualified</div>
+                <div class="stat-number" id="qualifiedLeads">-</div>
+                <div class="stat-change">Score >= 8</div>
+            </div>
+            
+            <div class="stat-card process">
+                <div class="stat-label">In Process</div>
+                <div class="stat-number" id="processLeads">-</div>
+                <div class="stat-change">Require follow-up</div>
+            </div>
+            
+            <div class="stat-card conversion">
+                <div class="stat-label">Conversion Rate</div>
+                <div class="stat-number" id="conversionRate">-</div>
+                <div class="stat-change">Qualified vs Total</div>
+            </div>
+        </div>
+        
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-title">Stage Distribution</div>
+                <canvas id="stageChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Top Industries</div>
+                <canvas id="industryChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">Recent Leads</div>
+                <div class="table-subtitle">Latest leads processed by the system</div>
+            </div>
+            
+            <div class="loading" id="tableLoading">
+                Loading data...
+            </div>
+            
+            <table id="leadsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Contact</th>
+                        <th>Company</th>
+                        <th>Industry</th>
+                        <th>Status</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let stageChart, industryChart;
+        
+        // Function to show notifications
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Function to load dashboard data from server
+        async function loadDashboardData() {
+            try {
+                console.log('Loading dashboard data...');
+                const response = await fetch('/api/dashboard-data');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateDashboard(result);
+                    console.log('Data loaded:', result.stats.totalLeads, 'leads');
+                } else {
+                    throw new Error('Error in server response');
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showNotification('Using sample data', 'info');
+                loadFallbackData();
+            }
+        }
+        
+        // Function to load recent leads specifically
+        async function loadRecentLeads() {
+            try {
+                console.log('Loading recent leads...');
+                const response = await fetch('/api/recent-leads?limit=10');
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Debug info:', result.debug);
+                    console.log(`Loaded ${result.data.length} recent leads out of ${result.totalValid} valid`);
+                    updateTable(result.data);
+                } else {
+                    throw new Error('Error loading recent leads');
+                }
+            } catch (error) {
+                console.error('Error loading recent leads:', error);
+                // Use fallback data for table
+                const fallbackLeads = [
+                    { name: 'No connection - Sample data', company: 'Demo Company', industry: 'technology', status: 'cold', score: 7.5 }
+                ];
+                updateTable(fallbackLeads);
+            }
+        }
+        
+        // Sample fallback data
+        function loadFallbackData() {
+            const fallbackData = {
+                stats: {
+                    totalLeads: 445,
+                    qualifiedLeads: 128,
+                    approachingLeads: 92,
+                    conversionRate: 28.7
+                },
+                charts: {
+                    stageDistribution: {
+                        'Approaching': 180,
+                        'Cold': 140,
+                        'Qualified': 100,
+                        'Contacted': 25
+                    },
+                    topIndustries: [
+                        { industry: 'Technology', count: 95 },
+                        { industry: 'Consulting', count: 78 },
+                        { industry: 'Manufacturing', count: 65 },
+                        { industry: 'Finance', count: 52 },
+                        { industry: 'Healthcare', count: 41 }
+                    ]
+                },
+                recentLeads: [
+                    { name: 'Test User', company: 'Test Company', industry: 'Technology', status: 'approaching', score: 9.0 },
+                    { name: 'Raymond Qu', company: 'Reliance Piles', industry: 'Manufacturing', status: 'approaching', score: 8.5 },
+                    { name: 'Wilglory Tanjong', company: 'Anima Iris', industry: 'Fashion', status: 'qualified', score: 9.2 },
+                    { name: 'Craig Confer', company: 'MT. JAC Consulting', industry: 'Consulting', status: 'approaching', score: 7.3 },
+                    { name: 'Cody Levine', company: 'TWICEMKT', industry: 'Marketing', status: 'cold', score: 5.8 }
+                ]
+            };
+            updateDashboard(fallbackData);
+        }
+        
+        // Function to update dashboard
+        function updateDashboard(data) {
+            // Update statistics
+            document.getElementById('totalLeads').textContent = data.stats.totalLeads;
+            document.getElementById('qualifiedLeads').textContent = data.stats.qualifiedLeads;
+            document.getElementById('processLeads').textContent = data.stats.approachingLeads;
+            document.getElementById('conversionRate').textContent = data.stats.conversionRate + '%';
+            
+            // Update charts
+            updateCharts(data.charts);
+            
+            // Update table
+            updateTable(data.recentLeads);
+        }
+        
+        // Function to update charts
+        function updateCharts(chartsData) {
+            // Destroy existing charts
+            if (stageChart) stageChart.destroy();
+            if (industryChart) industryChart.destroy();
+            
+            // Stage chart
+            const stageCtx = document.getElementById('stageChart').getContext('2d');
+            stageChart = new Chart(stageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(chartsData.stageDistribution),
+                    datasets: [{
+                        data: Object.values(chartsData.stageDistribution),
+                        backgroundColor: ['#f59e0b', '#6b7280', '#22c55e', '#3b82f6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Industry chart
+            const industryCtx = document.getElementById('industryChart').getContext('2d');
+            industryChart = new Chart(industryCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartsData.topIndustries.map(item => item.industry),
+                    datasets: [{
+                        label: 'Leads',
+                        data: chartsData.topIndustries.map(item => item.count),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Function to update table
+        function updateTable(leads) {
+            const tableBody = document.getElementById('leadsTableBody');
+            const table = document.getElementById('leadsTable');
+            const loading = document.getElementById('tableLoading');
+            
+            tableBody.innerHTML = '';
+            
+            leads.forEach(lead => {
+                const row = document.createElement('tr');
+                
+                const statusClass = `badge-${lead.status}`;
+                const scoreClass = lead.score >= 8 ? 'score-high' : lead.score >= 6 ? 'score-medium' : 'score-low';
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="lead-name">${lead.name}</div>
+                    </td>
+                    <td>
+                        <div class="lead-company">${lead.company}</div>
+                    </td>
+                    <td>${lead.industry}</td>
+                    <td>
+                        <span class="badge ${statusClass}">
+                            ${lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="score ${scoreClass}">${lead.score}</span>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            loading.classList.remove('show');
+            table.style.display = 'table';
+        }
+        
+        // Function to sync with Google Sheets
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            const originalText = btn.textContent;
+            
+            btn.textContent = 'Syncing...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/refresh-data');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`Data updated: ${result.totalLeads} leads`, 'success');
+                    await loadDashboardData();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                showNotification('Error syncing data', 'error');
+                console.error('Error:', error);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show initial loading
+            document.getElementById('tableLoading').classList.add('show');
+            
+            // Load data on startup
+            loadDashboardData();
+            loadRecentLeads();
+            
+            // Configure buttons
+            document.getElementById('refreshBtn').addEventListener('click', async function() {
+                await refreshData();
+                await loadRecentLeads();
+            });
+            
+            document.getElementById('processBtn').addEventListener('click', async function() {
+                const btn = this;
+                const originalText = btn.textContent;
+                
+                btn.textContent = 'Processing...';
+                btn.disabled = true;
+                
+                try {
+                    showNotification('Processing leads...', 'info');
+                    
+                    const response = await fetch('/api/process-lead', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: 'process_automation',
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        await loadDashboardData();
+                        await loadRecentLeads();
+                        showNotification('Leads processed successfully', 'success');
+                    } else {
+                        throw new Error('Error in processing');
+                    }
+                } catch (error) {
+                    showNotification('Error processing leads', 'error');
+                    console.error('Error:', error);
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+            
+            document.getElementById('reportBtn').addEventListener('click', async function() {
+                showNotification('Generating report...', 'info');
+                
+                try {
+                    const leadsResponse = await fetch('/api/recent-leads?limit=10');
+                    const leadsResult = await leadsResponse.json();
+                    
+                    setTimeout(() => {
+                        const reportWindow = window.open('', '_blank');
+                        
+                        let recentLeadsTable = '';
+                        if (leadsResult.success && leadsResult.data.length > 0) {
+                            recentLeadsTable = `
+                                <div class="section">
+                                    <h2>Latest 10 Leads Added</h2>
+                                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                                        <thead>
+                                            <tr style="background: #f8fafc;">
+                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Contact</th>
+                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Company</th>
+                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Industry</th>
+                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Status</th>
+                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: center;">Score</th>
+                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Email</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${leadsResult.data.map(lead => `
+                                                <tr>
+                                                    <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;">${lead.name}</td>
+                                                    <td style="padding: 10px; border: 1px solid #e2e8f0;">${lead.company}</td>
+                                                    <td style="padding: 10px; border: 1px solid #e2e8f0;">${lead.industry}</td>
+                                                    <td style="padding: 10px; border: 1px solid #e2e8f0;">
+                                                        <span style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; background: ${lead.status === 'approaching' ? '#fef3c7; color: #92400e' : lead.status === 'qualified' ? '#dcfce7; color: #166534' : '#f1f5f9; color: #475569'};">
+                                                            ${lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                                                        </span>
+                                                    </td>
+                                                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700; color: ${lead.score >= 8 ? '#22c55e' : lead.score >= 6 ? '#f59e0b' : '#ef4444'};">
+                                                        ${lead.score}
+                                                    </td>
+                                                    <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 0.9rem;">${lead.email}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                        } else {
+                            recentLeadsTable = `
+                                <div class="section">
+                                    <h2>Recent Leads</h2>
+                                    <p style="color: #64748b;">Could not load recent leads</p>
+                                </div>
+                            `;
+                        }
+                        
+                        reportWindow.document.write(`
+                            <html>
+                            <head>
+                                <title>Automated Leads Report</title>
+                                <style>
+                                    body { font-family: Arial, sans-serif; margin: 40px; background: #f8fafc; }
+                                    .header { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 30px; border-radius: 10px; text-align: center; }
+                                    .section { background: white; margin: 20px 0; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                                    .metric { display: inline-block; margin: 10px 20px; text-align: center; }
+                                    .metric-number { font-size: 2em; font-weight: bold; color: #3b82f6; }
+                                    .metric-label { color: #64748b; }
+                                    .print-btn { 
+                                        background: #3b82f6; 
+                                        color: white; 
+                                        border: none; 
+                                        padding: 10px 20px; 
+                                        border-radius: 5px; 
+                                        cursor: pointer; 
+                                        margin: 10px 0;
+                                        font-size: 14px;
+                                    }
+                                    .print-btn:hover { background: #2563eb; }
+                                    @media print {
+                                        .print-btn { display: none; }
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="header">
+                                    <h1>Automated Leads Report</h1>
+                                    <p>Generated on ${new Date().toLocaleDateString('en-US')} at ${new Date().toLocaleTimeString('en-US')}</p>
+                                </div>
+                                
+                                <div class="section">
+                                    <h2>Key Metrics</h2>
+                                    <div class="metric">
+                                        <div class="metric-number">${document.getElementById('totalLeads').textContent}</div>
+                                        <div class="metric-label">Total Leads</div>
+                                    </div>
+                                    <div class="metric">
+                                        <div class="metric-number">${document.getElementById('qualifiedLeads').textContent}</div>
+                                        <div class="metric-label">Qualified</div>
+                                    </div>
+                                    <div class="metric">
+                                        <div class="metric-number">${document.getElementById('conversionRate').textContent}</div>
+                                        <div class="metric-label">Conversion</div>
+                                    </div>
+                                </div>
+                                
+                                ${recentLeadsTable}
+                                
+                                <div class="section">
+                                    <button class="print-btn" onclick="window.print()">Print Report</button>
+                                    <p style="color: #64748b; text-align: center; margin-top: 20px;">
+                                        <small>Data updated in real-time from Google Sheets</small>
+                                    </p>
+                                </div>
+                            </body>
+                            </html>
+                        `);
+                        
+                        showNotification('Report generated successfully', 'success');
+                    }, 1500);
+                    
+                } catch (error) {
+                    showNotification('Error generating report', 'error');
+                    console.error('Error:', error);
+                }
+            });
+            
+            document.getElementById('exportBtn').addEventListener('click', async function() {
+                showNotification('Exporting data...', 'info');
+                
+                try {
+                    const response = await fetch('/api/recent-leads?limit=50');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const csvContent = [
+                            'Name,Company,Industry,Status,Score,Email',
+                            ...result.data.map(lead => 
+                                `"${lead.name}","${lead.company}","${lead.industry}","${lead.status}",${lead.score},"${lead.email || 'N/A'}"`
+                           )
+                       ].join('\n');
+                       
+                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+                       const url = window.URL.createObjectURL(blob);
+                       const a = document.createElement('a');
+                       a.href = url;
+                       a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+                       document.body.appendChild(a);
+                       a.click();
+                       document.body.removeChild(a);
+                       window.URL.revokeObjectURL(url);
+                       
+                       showNotification('Data exported successfully', 'success');
+                   } else {
+                       throw new Error('Error getting data');
+                   }
+               } catch (error) {
+                   showNotification('Error exporting data', 'error');
+                   console.error('Error:', error);
+               }
+           });
+           
+           // Update recent leads every 30 seconds
+           setInterval(async () => {
+               console.log('Updating recent leads...');
+               await loadRecentLeads();
+           }, 30000);
+       });
+   </script>
+</body>
+</html>

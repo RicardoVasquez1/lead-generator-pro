@@ -1,0 +1,40 @@
+{
+    "name": "demo-leads-automation",
+    "version": "1.0.0",
+    "description": "Lead automation with n8n and visual dashboard",
+    "main": "dashboard/server.js",
+    "scripts": {
+        "start": "node dashboard/server.js",
+        "dev": "nodemon dashboard/server.js",
+        "convert-data": "node data/convert-excel-to-csv.js",
+        "test": "node test/test-workflow.js",
+        "setup-db": "node scripts/setup-database.js"
+    },
+    "dependencies": {
+        "axios": "^1.11.0",
+        "cors": "^2.8.5",
+        "csv-parser": "^3.0.0",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "xlsx": "^0.18.5",
+        "pg": "^8.11.3",
+        "puppeteer": "^21.5.2", 
+        "nodemailer": "^6.9.7",
+        "node-cron": "^3.0.3"
+    },
+    "devDependencies": {
+        "n8n": "^1.107.3",
+        "nodemon": "^3.0.1"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "keywords": [
+        "n8n",
+        "automation",
+        "leads",
+        "dashboard"
+    ],
+    "author": "Ricardo",
+    "license": "MIT"
+}

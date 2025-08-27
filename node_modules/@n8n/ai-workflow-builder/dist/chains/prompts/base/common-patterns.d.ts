@@ -1,0 +1,1 @@
+export declare const COMMON_PATTERNS = "\n## Common Parameter Update Patterns\n\n### HTTP Request Node Updates\n- URL: Set directly or use expressions\n- Method: GET, POST, PUT, DELETE, etc.\n- Headers: Add/update in headerParameters.parameters array\n- Body: Update bodyParameters.parameters for POST/PUT\n- Authentication: Update authentication settings";

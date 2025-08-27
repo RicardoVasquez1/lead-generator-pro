@@ -1,0 +1,199 @@
+{
+    "name": "Lead Processing Automation",
+    "nodes": [
+      {
+        "parameters": {},
+        "id": "f6b4e5d1-8a2c-4d9e-b7f1-3e8c6a9d2b4f",
+        "name": "Manual Trigger",
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          240,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "http://localhost:3000/api/leads",
+          "options": {}
+        },
+        "id": "a8c3e7f2-9d4b-4e6c-8f2a-5b9e1c7d3a6f",
+        "name": "Get Leads from API",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [
+          460,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "// Lead Scoring and Processing Function\nconst items = $input.all();\nconst processedLeads = [];\n\nfor (const item of items) {\n  const leads = item.json.data || [];\n  \n  for (const lead of leads) {\n    // Enhanced scoring algorithm\n    let score = 5; // Base score\n    let priority = 'Medium';\n    let nextAction = 'Email Outreach';\n    \n    // Email verification bonus\n    if (lead.emailStatus === 'Verified') {\n      score += 2;\n    }\n    \n    // Company size scoring\n    if (lead.employees > 200) {\n      score += 3;\n      priority = 'High';\n    } else if (lead.employees > 50) {\n      score += 2;\n    }\n    \n    // Industry relevance\n    const techIndustries = ['technology', 'software', 'consulting', 'computer'];\n    if (lead.industry && techIndustries.some(tech => \n      lead.industry.toLowerCase().includes(tech)\n    )) {\n      score += 2;\n    }\n    \n    // Technology stack bonus\n    if (lead.technologies) {\n      const relevantTech = ['Google', 'AWS', 'Microsoft', 'Shopify', 'Salesforce'];\n      const techMatches = relevantTech.filter(tech => \n        lead.technologies.includes(tech)\n      ).length;\n      score += Math.min(techMatches, 3); // Max 3 points\n    }\n    \n    // LinkedIn presence\n    if (lead.linkedinUrl) {\n      score += 1;\n    }\n    \n    // Website presence\n    if (lead.website) {\n      score += 0.5;\n    }\n    \n    // Seniority scoring\n    const seniorTitles = ['CEO', 'CTO', 'President', 'Director', 'VP', 'Head'];\n    if (lead.title && seniorTitles.some(title => \n      lead.title.includes(title)\n    )) {\n      score += 2;\n      priority = 'High';\n    }\n    \n    // Normalize score (max 10)\n    score = Math.min(Math.round(score * 10) / 10, 10);\n    \n    // Determine priority and next action\n    if (score >= 8) {\n      priority = 'High';\n      nextAction = 'Personal Outreach';\n    } else if (score >= 6) {\n      priority = 'Medium';\n      nextAction = 'Email Sequence';\n    } else {\n      priority = 'Low';\n      nextAction = 'Newsletter';\n    }\n    \n    // Create processed lead object\n    const processedLead = {\n      ...lead,\n      calculatedScore: score,\n      priority: priority,\n      nextAction: nextAction,\n      processedAt: new Date().toISOString(),\n      aiInsights: {\n        industryMatch: techIndustries.some(tech => \n          lead.industry?.toLowerCase().includes(tech)\n        ),\n        seniorRole: seniorTitles.some(title => \n          lead.title?.includes(title)\n        ),\n        emailQuality: lead.emailStatus === 'Verified' ? 'High' : 'Medium',\n        companySize: lead.employees > 200 ? 'Large' : \n                    lead.employees > 50 ? 'Medium' : 'Small'\n      }\n    };\n    \n    processedLeads.push(processedLead);\n  }\n}\n\n// Sort by score (highest first)\nprocessedLeads.sort((a, b) => b.calculatedScore - a.calculatedScore);\n\n// Return top 10 leads for immediate action\nconst topLeads = processedLeads.slice(0, 10);\n\nreturn topLeads.map(lead => ({ json: lead }));"
+        },
+        "id": "c5d8a9b3-7e2f-4c1d-9a8b-4f6e2d8c5a9b",
+        "name": "Process & Score Leads",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          680,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{$json.calculatedScore}}",
+                "operation": "largerEqual",
+                "value2": "8"
+              }
+            ]
+          }
+        },
+        "id": "e9f2c4a7-6b1d-4e8f-a2c5-8d9f3e6a1b7c",
+        "name": "High Priority Filter",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          900,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "text",
+                "value": "🔥 High Priority Lead Alert!\n\n*{{$json.fullName}}* from *{{$json.company}}*\n• Score: {{$json.calculatedScore}}/10\n• Industry: {{$json.industry}}\n• Next Action: {{$json.nextAction}}\n• Email: {{$json.email}}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "b7a3d6e8-5c9f-4d2e-a8b4-6e1d9c7a3f5b",
+        "name": "Slack Notification",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [
+          1120,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "functionCode": "// Email Template Generator\nconst items = $input.all();\nconst emailTemplates = [];\n\nfor (const item of items) {\n  const lead = item.json;\n  \n  let template = '';\n  let subject = '';\n  \n  // Generate personalized email based on score and data\n  if (lead.calculatedScore >= 8) {\n    // High priority - Personal approach\n    subject = `Partnership opportunity with ${lead.company}`;\n    template = `Hi ${lead.firstName},\n\nI noticed ${lead.company} is in the ${lead.industry} space${lead.technologies ? ` and uses ${lead.technologies.split(',')[0]}` : ''}.\n\nWe've helped similar companies increase their lead generation by 40% through automation.\n\nWould you be open to a 15-minute call this week to explore how this could benefit ${lead.company}?\n\nBest regards,\nRicardo`;\n  } else if (lead.calculatedScore >= 6) {\n    // Medium priority - Value-focused\n    subject = `Quick question about ${lead.company}'s lead generation`;\n    template = `Hi ${lead.firstName},\n\nI help ${lead.industry} companies automate their lead generation process.\n\nMost companies see a 25-40% increase in qualified leads within 30 days.\n\nInterested in learning more?\n\nBest,\nRicardo`;\n  } else {\n    // Low priority - Educational content\n    subject = `Free guide: Automating lead generation for ${lead.industry}`;\n    template = `Hi ${lead.firstName},\n\nI created a free guide specifically for ${lead.industry} companies on lead automation.\n\nWould you like me to send it over?\n\nCheers,\nRicardo`;\n  }\n  \n  emailTemplates.push({\n    json: {\n      ...lead,\n      emailSubject: subject,\n      emailTemplate: template,\n      emailType: lead.calculatedScore >= 8 ? 'personal' : \n                 lead.calculatedScore >= 6 ? 'value' : 'educational'\n    }\n  });\n}\n\nreturn emailTemplates;"
+        },
+        "id": "f4b8e2c6-9d7a-4e5f-b3c9-7e2f5a8d1b6c",
+        "name": "Generate Email Templates",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          1120,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "url": "http://localhost:3000/api/process-lead",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "leadData",
+                "value": "={{$json}}"
+              },
+              {
+                "name": "action",
+                "value": "processed"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "a2c7f1e9-8b4d-4c6e-a5f8-9d2e6b7c4a1f",
+        "name": "Update Dashboard",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [
+          1340,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Manual Trigger": {
+        "main": [
+          [
+            {
+              "node": "Get Leads from API",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Leads from API": {
+        "main": [
+          [
+            {
+              "node": "Process & Score Leads",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Process & Score Leads": {
+        "main": [
+          [
+            {
+              "node": "High Priority Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "High Priority Filter": {
+        "main": [
+          [
+            {
+              "node": "Slack Notification",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Generate Email Templates",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Generate Email Templates",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate Email Templates": {
+        "main": [
+          [
+            {
+              "node": "Update Dashboard",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "settings": {},
+    "versionId": "1"
+  }

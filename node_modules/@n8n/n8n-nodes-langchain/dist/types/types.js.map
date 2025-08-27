@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../types/types.ts"],"sourcesContent":["import type { z } from 'zod';\n\nexport type OpenAICompatibleCredential = { apiKey: string; url: string };\n\nexport type ZodObjectAny = z.ZodObject<any, any, any, any>;\n"],"mappings":";;;;;;;;;;;;;;AAAA;AAAA;","names":[]}

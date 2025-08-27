@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../../../nodes/agents/Agent/agents/OpenAiFunctionsAgent/prompt.ts"],"sourcesContent":["export const SYSTEM_MESSAGE = 'You are a helpful AI assistant.';\n"],"mappings":";;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAO,MAAM,iBAAiB;","names":[]}

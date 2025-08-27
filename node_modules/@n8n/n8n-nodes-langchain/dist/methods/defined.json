@@ -1,0 +1,11 @@
+{
+  "openAi": [
+    "getFiles"
+  ],
+  "mcpClientTool": [
+    "getTools"
+  ],
+  "modelSelector": [
+    "getModels"
+  ]
+}
