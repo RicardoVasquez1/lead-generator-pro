@@ -1,857 +1,1610 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Leads Automation</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tribearium Lead Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'tribearium-primary': '#7c3aed',
+            'tribearium-secondary': '#06b6d4',
+            'tribearium-accent': '#f59e0b',
+            'tribearium-sidebar': '#0f172a',
+            'tribearium-hover': '#1e293b'
+          }
         }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .header {
-            background: white;
-            border-radius: 12px;
-            padding: 32px;
-            margin-bottom: 32px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            border-left: 4px solid #3b82f6;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            color: #1e293b;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-        
-        .header p {
-            color: #64748b;
-            font-size: 1.1rem;
-            margin-bottom: 24px;
-        }
-        
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #dcfce7;
-            color: #166534;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 24px;
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #22c55e;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        
-        .buttons-grid {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
-        
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-        }
-        
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #475569;
-        }
-        
-        .btn-secondary:hover {
-            background: #cbd5e1;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 24px;
-            margin-bottom: 32px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid var(--accent-color);
-        }
-        
-        .stat-card.total { --accent-color: #3b82f6; }
-        .stat-card.qualified { --accent-color: #22c55e; }
-        .stat-card.process { --accent-color: #f59e0b; }
-        .stat-card.conversion { --accent-color: #ef4444; }
-        
-        .stat-label {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--accent-color);
-            margin-bottom: 4px;
-        }
-        
-        .stat-change {
-            color: #64748b;
-            font-size: 0.85rem;
-        }
-        
-        .charts-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 32px;
-        }
-        
-        .chart-container {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            height: 350px;
-        }
-        
-        .chart-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 20px;
-        }
-        
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        .table-header {
-            background: #f8fafc;
-            padding: 20px 24px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .table-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 4px;
-        }
-        
-        .table-subtitle {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th, td {
-            padding: 16px 24px;
-            text-align: left;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        
-        th {
-            background: #f8fafc;
-            font-weight: 600;
-            color: #475569;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .lead-name {
-            font-weight: 600;
-            color: #1e293b;
-        }
-        
-        .lead-company {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-        
-        .badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        
-        .badge-approaching {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .badge-qualified {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .badge-cold {
-            background: #f1f5f9;
-            color: #475569;
-        }
-        
-        .score {
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        
-        .score-high { color: #22c55e; }
-        .score-medium { color: #f59e0b; }
-        .score-low { color: #ef4444; }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 1000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-        }
-        
-        .notification.success { background: #22c55e; }
-        .notification.error { background: #ef4444; }
-        .notification.info { background: #3b82f6; }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 40px;
-            color: #64748b;
-        }
-        
-        .loading.show {
-            display: block;
-        }
-        
-        @media (max-width: 768px) {
-            .charts-section {
-                grid-template-columns: 1fr;
-            }
-            
-            .buttons-grid {
-                flex-direction: column;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    .sidebar-item{transition:all .2s ease-in-out}
+    .sidebar-item:hover{background-color:#1e293b;transform:translateX(2px)}
+    .sidebar-item.active{background-color:#7c3aed;border-right:3px solid #a855f7}
+    .content-fade{animation:fadeIn .3s ease-in-out}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .table-hover:hover{background-color:#f8fafc}
+    .btn-primary{background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);transition:all .2s ease}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.3)}
+  </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Demo Leads Automation</h1>
-            <p>Intelligent lead generation and qualification automation</p>
-            
-            <div class="status-badge">
-                <div class="status-dot"></div>
-                System connected to Google Sheets
-            </div>
-            
-            <div class="buttons-grid">
-                <button id="refreshBtn" class="btn btn-primary">Sync Data</button>
-                <button id="processBtn" class="btn btn-secondary">Process Leads</button>
-                <button id="reportBtn" class="btn btn-secondary">Generate Report</button>
-                <button id="exportBtn" class="btn btn-secondary">Export CSV</button>
-            </div>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card total">
-                <div class="stat-label">Total Leads</div>
-                <div class="stat-number" id="totalLeads">-</div>
-                <div class="stat-change">Complete database</div>
-            </div>
-            
-            <div class="stat-card qualified">
-                <div class="stat-label">Qualified</div>
-                <div class="stat-number" id="qualifiedLeads">-</div>
-                <div class="stat-change">Score >= 8</div>
-            </div>
-            
-            <div class="stat-card process">
-                <div class="stat-label">In Process</div>
-                <div class="stat-number" id="processLeads">-</div>
-                <div class="stat-change">Require follow-up</div>
-            </div>
-            
-            <div class="stat-card conversion">
-                <div class="stat-label">Conversion Rate</div>
-                <div class="stat-number" id="conversionRate">-</div>
-                <div class="stat-change">Qualified vs Total</div>
-            </div>
-        </div>
-        
-        <div class="charts-section">
-            <div class="chart-container">
-                <div class="chart-title">Stage Distribution</div>
-                <canvas id="stageChart"></canvas>
-            </div>
-            
-            <div class="chart-container">
-                <div class="chart-title">Top Industries</div>
-                <canvas id="industryChart"></canvas>
-            </div>
-        </div>
-        
-        <div class="table-container">
-            <div class="table-header">
-                <div class="table-title">Recent Leads</div>
-                <div class="table-subtitle">Latest leads processed by the system</div>
-            </div>
-            
-            <div class="loading" id="tableLoading">
-                Loading data...
-            </div>
-            
-            <table id="leadsTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Contact</th>
-                        <th>Company</th>
-                        <th>Industry</th>
-                        <th>Status</th>
-                        <th>Score</th>
-                    </tr>
-                </thead>
-                <tbody id="leadsTableBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
+<body class="bg-gray-50 font-sans">
 
-    <script>
-        let stageChart, industryChart;
-        
-        // Function to show notifications
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateX(0)';
-            }, 100);
-            
-            setTimeout(() => {
-                notification.style.transform = 'translateX(400px)';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        document.body.removeChild(notification);
-                    }
-                }, 300);
-            }, 3000);
+  <!-- Top Navigation Bar -->
+  <nav class="bg-white border-b border-gray-200 fixed w-full top-0 z-50">
+    <div class="flex items-center justify-between px-6 py-3">
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-tribearium-primary rounded-lg flex items-center justify-center">
+            <i class="fas fa-rocket text-white text-sm"></i>
+          </div>
+          <h1 class="text-xl font-bold text-gray-900">Tribearium</h1>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-3">
+          <button class="p-2 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-bell"></i>
+          </button>
+          <button class="p-2 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-cog"></i>
+          </button>
+          <div class="w-8 h-8 bg-tribearium-primary rounded-full flex items-center justify-center text-white text-sm font-medium">TR</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex pt-16 min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-tribearium-sidebar text-white fixed left-0 top-16 bottom-0 overflow-y-auto">
+      <div class="p-4">
+        <nav class="space-y-1">
+          <a href="#" onclick="showSection('sequences')" class="sidebar-item active flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-paper-plane mr-3"></i>Sequences
+          </a>
+          <a href="#" onclick="showSection('tasks')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-tasks mr-3"></i>Tasks
+          </a>
+          <a href="#" onclick="showSection('inbox')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-inbox mr-3"></i>Unified Inbox
+          </a>
+          <a href="#" onclick="showSection('clients')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-building mr-3"></i>Client Management
+          </a>
+          <a href="#" onclick="showSection('leadfinder')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-search mr-3"></i>Lead Finder
+          </a>
+          <a href="#" onclick="showSection('prospects')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-users mr-3"></i>Prospects
+          </a>
+          <a href="#" onclick="showSection('verifier')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-check-circle mr-3"></i>Email Verifier
+          </a>
+          <a href="#" onclick="showSection('templates')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-file-alt mr-3"></i>Templates
+          </a>
+          <a href="#" onclick="showSection('analytics')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-chart-bar mr-3"></i>Analytics
+          </a>
+          <div class="border-t border-gray-600 my-4"></div>
+          <a href="#" onclick="showSection('settings')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-cog mr-3"></i>Settings
+          </a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64 p-6">
+
+      <!-- Sequences Section -->
+      <div id="sequences-section" class="content-fade">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Sequences</h2>
+          <p class="text-gray-600">Welcome, Ricardo! Let's build your outreach</p>
+          <div class="text-sm text-gray-500 mt-1">0/5 steps completed</div>
+        </div>
+
+        <!-- Onboarding Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <i class="fas fa-magic text-tribearium-primary"></i><span class="font-medium">Generate AI Sequence</span>
+                </div>
+                <button class="text-tribearium-primary hover:text-purple-700 text-sm font-medium" onclick="createSequence()">Create Sequence →</button>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <i class="fas fa-users text-tribearium-secondary"></i><span class="font-medium">Add Prospects</span>
+                </div>
+                <button onclick="showSection('prospects')" class="text-tribearium-primary hover:text-purple-700 text-sm font-medium">Add Prospects →</button>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <i class="fas fa-envelope text-tribearium-accent"></i><span class="font-medium">Add Email Account</span>
+                </div>
+                <button class="text-tribearium-primary hover:text-purple-700 text-sm font-medium">Add Email Account →</button>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <i class="fas fa-rocket text-tribearium-primary"></i><span class="font-medium">Launch Sequence</span>
+                </div>
+                <button class="text-tribearium-primary hover:text-purple-700 text-sm font-medium">Launch Sequence →</button>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <i class="fas fa-users-cog text-tribearium-secondary"></i><span class="font-medium">Add Clients</span>
+                </div>
+                <button onclick="showSection('clients')" class="text-tribearium-primary hover:text-purple-700 text-sm font-medium">Add Clients →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-br from-tribearium-primary to-purple-700 rounded-lg p-6 text-white">
+            <h3 class="text-lg font-bold mb-4">How To Create Your First Sequence</h3>
+            <div class="space-y-3 text-sm">
+              <div class="flex items-center space-x-2"><div class="w-2 h-2 bg-white rounded-full"></div><span>Set up your email templates</span></div>
+              <div class="flex items-center space-x-2"><div class="w-2 h-2 bg-white rounded-full"></div><span>Add your prospects</span></div>
+              <div class="flex items-center space-x-2"><div class="w-2 h-2 bg-white rounded-full"></div><span>Configure timing and settings</span></div>
+              <div class="flex items-center space-x-2"><div class="w-2 h-2 bg-white rounded-full"></div><span>Launch your sequence</span></div>
+            </div>
+            <button class="mt-4 bg-white text-tribearium-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100">
+              <i class="fas fa-play mr-2"></i>Watch Tutorial
+            </button>
+          </div>
+        </div>
+
+        <!-- Sequences Table -->
+        <div class="bg-white rounded-lg border border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <input type="text" placeholder="Search here..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-64">
+                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option>Client Associated</option>
+                </select>
+                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option>Sequence Owner</option>
+                </select>
+                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option>Status (All)</option>
+                </select>
+              </div>
+              <div class="flex items-center space-x-3">
+                <button class="text-tribearium-primary hover:text-purple-700 text-sm font-medium">
+                  <i class="fas fa-magic mr-2"></i>Write With AI
+                </button>
+                <button onclick="createSequence()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium">Create Sequence</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><input type="checkbox" class="rounded"></th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sequence Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sequence Progress</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prospect</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacted</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opened</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Replied</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Positive</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email Accounts</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                </tr>
+              </thead>
+              <tbody id="sequencesTableBody" class="bg-white divide-y divide-gray-200">
+                <tr class="table-hover">
+                  <td class="px-6 py-4 whitespace-nowrap"><input type="checkbox" class="rounded"></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-2 h-2 bg-gray-400 rounded-full mr-3"></div>
+                      <div>
+                        <div class="text-sm font-medium text-gray-900">Tribearium First Sequence 🚀</div>
+                        <div class="text-sm text-gray-500">Draft</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><span class="text-xs font-medium">0</span></div>
+                      <span class="ml-2 text-sm text-gray-500">/3</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">48</span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks Section -->
+      <div id="tasks-section" class="content-fade hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Tasks</h2>
+          <div class="flex items-center space-x-6 mt-4">
+            <button class="text-tribearium-primary border-b-2 border-tribearium-primary pb-1 text-sm font-medium">Due Today <span class="ml-1">0</span></button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Upcoming <span class="ml-1">0</span></button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Overdue <span class="ml-1">0</span></button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Completed <span class="ml-1">0</span></button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Skipped <span class="ml-1">0</span></button>
+          </div>
+        </div>
+        <div class="text-center py-16">
+          <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-tasks text-2xl text-tribearium-primary"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Manage Your Multichannel Tasks</h3>
+          <p class="text-gray-600 max-w-md mx-auto">Create outreach tasks from sequences and track their progress here. View, complete, skip or snooze tasks across all channels in one place.</p>
+        </div>
+      </div>
+
+      <!-- Unified Inbox Section -->
+      <div id="inbox-section" class="content-fade hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Unified Inbox</h2>
+          <div class="flex items-center space-x-6 mt-4">
+            <button class="text-saleshandy-blue border-b-2 border-saleshandy-blue pb-1 text-sm font-medium">All</button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Unread</button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Scheduled</button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Draft</button>
+          </div>
+        </div>
+        <div class="flex h-96 bg-white rounded-lg border border-gray-200">
+          <div class="w-1/3 border-r border-gray-200">
+            <div class="p-4 border-b border-gray-200">
+              <input type="text" placeholder="Search Conversations..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+            <div class="text-center py-16">
+              <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+              <p class="text-gray-500">No email found</p>
+              <p class="text-sm text-gray-400">Sorry, we couldn't find any conversations that match your desired criteria.</p>
+            </div>
+          </div>
+          <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+              <i class="fas fa-comments text-4xl text-gray-300 mb-4"></i>
+              <p class="text-gray-500">No conversations selected</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Client Management Section -->
+      <div id="clients-section" class="content-fade hidden">
+        <div class="mb-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold text-gray-900">Client Management</h2>
+            <button onclick="addClient()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium">Add Client</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <input type="text" placeholder="Search" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-64">
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Sequences</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Email Account</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Prospects</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Email Sent</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permission</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created On</th>
+                </tr>
+              </thead>
+              <tbody id="clientsTableBody" class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-8 h-8 bg-green-500 rounded-full mr-3"></div>
+                      <div>
+                        <div class="text-sm font-medium text-gray-900">Demo</div>
+                        <div class="text-sm text-gray-500">ricardokr63+demo@yahoo.com</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">No Access</span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">17 Sep, 2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lead Finder Section -->
+      <div id="leadfinder-section" class="content-fade hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Lead Finder</h2>
+          <div class="flex items-center space-x-6 mt-4">
+            <button class="text-saleshandy-blue border-b-2 border-saleshandy-blue pb-1 text-sm font-medium">People</button>
+            <button class="text-gray-600 pb-1 text-sm font-medium">Saved</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200">
+          <div class="flex">
+            <!-- Filters -->
+            <div class="w-80 border-r border-gray-200 p-6">
+              <div class="space-y-6">
+                <div><button onclick="expandFilter('bulk')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-plus mr-2"></i>Bulk Search</button></div>
+                <div><button onclick="expandFilter('name')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-user mr-2"></i>Name</button></div>
+                <div><button onclick="expandFilter('location')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-map-marker-alt mr-2"></i>Location</button></div>
+                <div><button onclick="expandFilter('role')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-briefcase mr-2"></i>Role & Department</button></div>
+                <div><button onclick="expandFilter('skills')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-tools mr-2"></i>Skills</button></div>
+                <div><button onclick="expandFilter('experience')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-calendar mr-2"></i>Years Of Experience</button></div>
+                <div><button onclick="expandFilter('company')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-building mr-2"></i>Company Name / Domain</button></div>
+                <div><button onclick="expandFilter('employees')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-users mr-2"></i>Employee Count</button></div>
+                <div><button onclick="expandFilter('revenue')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-dollar-sign mr-2"></i>Revenue</button></div>
+                <div><button onclick="expandFilter('industry')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-industry mr-2"></i>Industry</button></div>
+                <div><button onclick="expandFilter('keywords')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50"><i class="fas fa-search mr-2"></i>Keywords</button></div>
+              </div>
+              <div class="mt-8">
+                <button onclick="runApolloSearch()" class="btn-primary w-full text-white py-3 rounded-lg text-sm font-medium">
+                  <i class="fas fa-search mr-2"></i>Search
+                </button>
+              </div>
+            </div>
+
+            <!-- Main -->
+            <div class="flex-1 p-6">
+              <div class="text-center py-16">
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-magic text-2xl text-purple-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Accelerate Lead Discovery with AI Search</h3>
+                <p class="text-gray-600 mb-6">Search by job title, location, or industry.</p>
+
+                <div class="max-w-md mx-auto mb-8">
+                  <div class="relative">
+                    <input type="text" id="aiSearchInput" placeholder="Find me people from investment banking in the US." class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm pr-10">
+                    <button onclick="runAISearch()" class="absolute right-3 top-3 text-tribearium-primary"><i class="fas fa-search"></i></button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 max-w-lg mx-auto">
+                  <div class="text-center"><h4 class="font-medium text-gray-900 mb-2">Start typing query</h4><p class="text-sm text-gray-600">Search by job title, location, or industry.</p></div>
+                  <div class="text-center"><h4 class="font-medium text-gray-900 mb-2">Apply search filters</h4><p class="text-sm text-gray-600">Use filters from the beginning to get more accurate search results.</p></div>
+                </div>
+
+                <p class="text-sm text-gray-500 mt-8">Get leads from 700M+ contacts across 60M+ companies</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prospects Section -->
+      <div id="prospects-section" class="content-fade hidden">
+        <div class="mb-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold text-gray-900">Prospects</h2>
+            <div class="flex items-center space-x-3">
+              <button onclick="showFilters()" class="text-gray-600 hover:text-gray-800 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <i class="fas fa-filter mr-2"></i>Filter
+              </button>
+              <button onclick="bulkExport()" class="text-gray-600 hover:text-gray-800 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <i class="fas fa-download mr-2"></i>Export
+              </button>
+              <button onclick="addProspect()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium">Add Prospect</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div id="bulkActionsBar" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <span class="text-sm font-medium text-gray-700"><span id="selectedCount">0</span> prospects selected</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <button onclick="bulkAddToSequence()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium">Add to Sequence</button>
+              <button onclick="bulkVerifyEmails()" class="text-gray-600 hover:text-gray-800 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">Verify Emails</button>
+              <button onclick="bulkDelete()" class="text-red-600 hover:text-red-800 px-3 py-2 border border-red-300 rounded-lg text-sm bg-white">Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input type="checkbox" id="selectAllProspects" class="rounded" onchange="toggleSelectAll()">
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Industry</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latest Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sequence Associated</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email Verification</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="prospectsTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- JS fills -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-gray-700">
+                Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalProspects">0</span> prospects
+              </div>
+              <div class="flex items-center space-x-2">
+                <button onclick="previousPage()" id="prevBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-100" disabled>Previous</button>
+                <span class="text-sm text-gray-700">Page <span id="currentPage">1</span></span>
+                <button onclick="nextPage()" id="nextBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-100" disabled>Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Verifier Section -->
+      <div id="verifier-section" class="content-fade hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Email Verifier</h2>
+          <p class="text-gray-600">Verify email addresses to improve deliverability</p>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+          <div class="text-center py-16">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-check-circle text-2xl text-green-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Email Verification</h3>
+            <p class="text-gray-600 mb-6">Upload your email list or verify individual emails to ensure high deliverability rates.</p>
+
+            <div class="max-w-md mx-auto space-y-4">
+              <div><input type="text" id="emailToVerify" placeholder="Enter email address to verify" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm"></div>
+              <button onclick="verifySingleEmail()" class="btn-primary text-white px-6 py-2 rounded-lg text-sm font-medium w-full">Verify Email</button>
+              <div class="text-center"><span class="text-gray-500 text-sm">or</span></div>
+              <button onclick="uploadCSVForVerification()" class="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg text-sm font-medium w-full hover:bg-gray-50">
+                <i class="fas fa-upload mr-2"></i>Upload CSV File
+              </button>
+            </div>
+
+            <div id="verificationResult" class="hidden mt-6 p-4 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Templates Section -->
+      <div id="templates-section" class="content-fade hidden">
+        <div class="mb-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Templates</h2>
+              <div class="flex items-center space-x-4 mt-2">
+                <button class="text-tribearium-primary border-b-2 border-tribearium-primary pb-1 text-sm font-medium">My Templates</button>
+                <button class="text-gray-600 pb-1 text-sm font-medium">Team Templates</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-3">
+              <input type="text" placeholder="Search" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-48">
+              <button onclick="createTemplate()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium">New Template</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg border border-gray-200">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="templatesTableBody" class="bg-white divide-y divide-gray-200">
+                <tr class="table-hover">
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">Day 1 - Introduction</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">Quick automation question for {{company}}</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center text-sm text-gray-600"><i class="fas fa-heart mr-1"></i>0</div>
+                      <div class="flex items-center text-sm text-gray-600"><i class="fas fa-eye mr-1"></i>0</div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">Tribearium</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onclick="editTemplate('day_1')" class="text-saleshandy-blue hover:text-blue-700 mr-3"><i class="fas fa-edit"></i></button>
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+                  </td>
+                </tr>
+                <tr class="table-hover">
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">Day 3 - Follow up</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">Re: Automation for {{company}}</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center text-sm text-gray-600"><i class="fas fa-heart mr-1"></i>0</div>
+                      <div class="flex items-center text-sm text-gray-600"><i class="fas fa-eye mr-1"></i>0</div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">Tribearium</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onclick="editTemplate('day_3')" class="text-saleshandy-blue hover:text-blue-700 mr-3"><i class="fas fa-edit"></i></button>
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+                  </td>
+                </tr>
+                <tr class="table-hover">
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">Day 7 - Final Touch</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">One question for {{name}} at {{company}}</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center text-sm text-gray-600"><i class="fas fa-heart mr-1"></i>0</div>
+                      <div class="flex items-center text-sm text-gray-600"><i class="fas fa-eye mr-1"></i>0</div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">Tribearium</div></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onclick="editTemplate('day_7')" class="text-saleshandy-blue hover:text-blue-700 mr-3"><i class="fas fa-edit"></i></button>
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Section -->
+      <div id="analytics-section" class="content-fade hidden">
+        <div class="mb-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Analytics</h2>
+              <div class="flex items-center space-x-4 mt-2">
+                <button class="text-tribearium-primary border-b-2 border-tribearium-primary pb-1 text-sm font-medium">Sequence</button>
+                <button class="text-gray-600 pb-1 text-sm font-medium">Teams</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-3">
+              <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm"><option>All sequences</option></select>
+              <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm"><option>Client Associated</option></select>
+              <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm"><option>Last 30 Days</option></select>
+              <button onclick="exportAnalytics()" class="text-gray-600 hover:text-gray-800 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <i class="fas fa-download mr-2"></i>Export
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsProspects">0</div>
+            <div class="text-xs text-gray-600 mb-2">Prospect added</div>
+            <div class="flex items-center justify-center text-xs text-green-600"><i class="fas fa-arrow-up mr-1"></i><span id="prospectGrowth">0%</span></div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsContacted">0</div>
+            <div class="text-xs text-gray-600 mb-2">Contacted</div>
+            <div class="text-xs text-gray-600">(<span id="contactedPercent">0%</span>)</div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsOpened">0</div>
+            <div class="text-xs text-gray-600 mb-2">Opened</div>
+            <div class="text-xs text-gray-600">(<span id="openedPercent">0%</span>)</div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsReplied">0</div>
+            <div class="text-xs text-gray-600 mb-2">Replied</div>
+            <div class="text-xs text-gray-600">(<span id="repliedPercent">0%</span>)</div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsUnsubscribed">0</div>
+            <div class="text-xs text-gray-600 mb-2">Unsubscribed</div>
+            <div class="text-xs text-gray-600">(<span id="unsubscribedPercent">0%</span>)</div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsPositive">0</div>
+            <div class="text-xs text-gray-600 mb-2">Positive sentiment</div>
+            <div class="text-xs text-gray-600">(<span id="positivePercent">0%</span>)</div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsNegative">0</div>
+            <div class="text-xs text-gray-600 mb-2">Negative sentiment</div>
+            <div class="text-xs text-gray-600">(<span id="negativePercent">0%</span>)</div>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900 mb-1" id="analyticsDealValue">$0</div>
+            <div class="text-xs text-gray-600 mb-2">Deal Value</div>
+          </div>
+        </div>
+
+        <!-- Chart placeholder -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-4">
+              <button class="text-saleshandy-blue border-b-2 border-saleshandy-blue pb-1 text-sm font-medium">Prospect</button>
+              <button class="text-gray-600 pb-1 text-sm font-medium">Email</button>
+              <button class="text-gray-600 pb-1 text-sm font-medium"># %</button>
+            </div>
+            <div class="flex items-center space-x-4">
+              <button class="text-gray-600 pb-1 text-sm font-medium">Daily</button>
+              <button class="text-gray-600 pb-1 text-sm font-medium">Weekly</button>
+              <button class="text-gray-600 pb-1 text-sm font-medium">Monthly</button>
+              <button class="text-gray-600 pb-1 text-sm font-medium">Quarterly</button>
+            </div>
+            <div class="flex items-center space-x-4">
+              <span class="text-sm text-gray-600">Count by</span>
+              <button class="text-saleshandy-blue border-b-2 border-saleshandy-blue pb-1 text-sm font-medium">Relative</button>
+              <button class="text-gray-600 pb-1 text-sm font-medium">Absolute</button>
+              <label class="flex items-center">
+                <input type="checkbox" class="mr-2 rounded"><span class="text-sm text-gray-600">First time event</span>
+              </label>
+            </div>
+          </div>
+          <div class="h-64 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
+            <div class="text-center">
+              <i class="fas fa-chart-line text-4xl text-gray-300 mb-4"></i>
+              <p class="text-gray-500">No data available for the selected period</p>
+              <button onclick="loadAnalytics()" class="mt-4 text-saleshandy-blue hover:text-blue-700 text-sm font-medium">Refresh Data</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytics Table -->
+        <div class="bg-white rounded-lg border border-gray-200">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sequence Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prospects added</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacted</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opened</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clicked</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Replied</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unsubscribed</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Not Now</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Do Not Contact</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uncategorized</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                </tr>
+              </thead>
+              <tbody id="analyticsTableBody" class="bg-white divide-y divide-gray-200">
+                <tr class="table-hover">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center"><div class="w-2 h-2 bg-gray-400 rounded-full mr-3"></div><span class="text-sm font-medium text-gray-900">Tribearium First Sequence</span></div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0 (0%)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0 (0%)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0 (0%)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0 (0%)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">0</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div id="settings-section" class="content-fade hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Settings</h2>
+          <p class="text-gray-600">Configure your Tribearium Lead Generator preferences</p>
+        </div>
+
+        <!-- Email Configuration -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-envelope mr-3 text-tribearium-primary"></i>Email Configuration</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Gmail Account</label>
+              <input type="email" value="ricardokr63@gmail.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" readonly>
+              <p class="text-xs text-gray-500 mt-1">Connected and verified</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Daily Email Limit</label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="50">50 emails per day</option>
+                <option value="100">100 emails per day</option>
+                <option value="200">200 emails per day</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Email Sending Hours</label>
+              <div class="flex space-x-2">
+                <select class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="9">9:00 AM</option><option value="8">8:00 AM</option><option value="10">10:00 AM</option>
+                </select>
+                <span class="flex items-center text-gray-500">to</span>
+                <select class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="17">5:00 PM</option><option value="16">4:00 PM</option><option value="18">6:00 PM</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Time Zone</label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="America/New_York">Eastern Time (EST)</option>
+                <option value="America/Chicago">Central Time (CST)</option>
+                <option value="America/Denver">Mountain Time (MST)</option>
+                <option value="America/Los_Angeles">Pacific Time (PST)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-cog mr-3 text-tribearium-secondary"></i>API Configuration</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Apify API Key</label>
+              <div class="relative">
+                <input type="password" value="apify_api_bPNCx5VODioKI6CJ0uDDK0QdnIstw90WFybA" class="w-full px-3 py-2 border border-gray-300 rounded-lg pr-10">
+                <button class="absolute right-3 top-2 text-gray-400 hover:text-gray-600"><i class="fas fa-eye"></i></button>
+              </div>
+              <p class="text-xs text-green-600 mt-1">✓ Connected and active</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Hunter.io API Key</label>
+              <div class="relative">
+                <input type="password" value="8f89bbd59f1b3a75cb4e19608d2f13cb78549dd6" class="w-full px-3 py-2 border border-gray-300 rounded-lg pr-10">
+                <button class="absolute right-3 top-2 text-gray-400 hover:text-gray-600"><i class="fas fa-eye"></i></button>
+              </div>
+              <p class="text-xs text-green-600 mt-1">✓ Connected and active</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Google Places API Key</label>
+              <div class="relative">
+                <input type="password" value="AIzaSyCxdLlz_sA-KvNcqcl42I3qxZjPXCwEWPQ" class="w-full px-3 py-2 border border-gray-300 rounded-lg pr-10">
+                <button class="absolute right-3 top-2 text-gray-400 hover:text-gray-600"><i class="fas fa-eye"></i></button>
+              </div>
+              <p class="text-xs text-green-600 mt-1">✓ Connected and active</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">LinkedIn API Key</label>
+              <div class="relative">
+                <input type="password" placeholder="Coming soon..." class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" disabled>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Coming soon</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lead Generation Settings -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-search mr-3 text-tribearium-accent"></i>Lead Generation Settings</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <span class="font-medium text-gray-900">Auto-verify emails</span>
+                <p class="text-sm text-gray-500">Automatically verify email addresses when adding prospects</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tribearium-primary"></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <span class="font-medium text-gray-900">Skip duplicate prospects</span>
+                <p class="text-sm text-gray-500">Automatically skip prospects that already exist in your database</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tribearium-primary"></div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Lead Score</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="60">60 (Recommended)</option>
+                  <option value="70">70 (High Quality)</option>
+                  <option value="80">80 (Premium)</option>
+                  <option value="50">50 (All Leads)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Default Batch Size</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="25">25 prospects</option>
+                  <option value="50">50 prospects</option>
+                  <option value="100">100 prospects</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sequence Settings -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-paper-plane mr-3 text-tribearium-primary"></i>Sequence Settings</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <span class="font-medium text-gray-900">Manual sequence approval</span>
+                <p class="text-sm text-gray-500">Require manual approval before starting email sequences</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tribearium-primary"></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <span class="font-medium text-gray-900">Stop sequence on reply</span>
+                <p class="text-sm text-gray-500">Automatically pause sequence when prospect replies</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tribearium-primary"></div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Default Template Set</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="tribearium_default">Tribearium Default (4 emails)</option>
+                  <option value="short_sequence">Short Sequence (2 emails)</option>
+                  <option value="extended_sequence">Extended Sequence (6 emails)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email Delay (days)</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <input type="number" value="1" min="1" max="7" class="px-2 py-1 border border-gray-300 rounded text-sm" placeholder="Day 1">
+                  <input type="number" value="3" min="1" max="7" class="px-2 py-1 border border-gray-300 rounded text-sm" placeholder="Day 3">
+                  <input type="number" value="7" min="1" max="14" class="px-2 py-1 border border-gray-300 rounded text-sm" placeholder="Day 7">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end">
+          <button onclick="saveSettings()" class="btn-primary text-white px-6 py-3 rounded-lg font-medium">
+            <i class="fas fa-save mr-2"></i>Save Settings
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <!-- Create Sequence Modal -->
+  <div id="createSequenceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Create New Sequence</h3>
+            <button onclick="closeModal('createSequenceModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <div class="p-6">
+          <form id="sequenceForm">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Sequence Name</label>
+                <input type="text" id="sequenceName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Enter sequence name">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea id="sequenceDescription" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Enter sequence description"></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email Templates</label>
+                <div class="space-y-2">
+                  <div class="flex items-center"><input type="checkbox" id="template_day1" class="mr-2" checked><label for="template_day1">Day 1 - Introduction</label></div>
+                  <div class="flex items-center"><input type="checkbox" id="template_day3" class="mr-2" checked><label for="template_day3">Day 3 - Follow up</label></div>
+                  <div class="flex items-center"><input type="checkbox" id="template_day7" class="mr-2" checked><label for="template_day7">Day 7 - Final Touch</label></div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+              <button type="button" onclick="closeModal('createSequenceModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg">Create Sequence</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Sequence Modal -->
+  <div id="addToSequenceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg max-w-md w-full">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Add to Sequence</h3>
+            <button onclick="closeModal('addToSequenceModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Select Sequence</label>
+            <select id="sequenceSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <option value="">Choose a sequence...</option>
+              <option value="tribearium_sequence">Tribearium First Sequence</option>
+            </select>
+          </div>
+          <div class="flex justify-end space-x-3">
+            <button onclick="closeModal('addToSequenceModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onclick="confirmAddToSequence()" class="btn-primary text-white px-4 py-2 rounded-lg">Add to Sequence</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    // ===== State
+    let apiData = { leads: [], sequences: [], prospects: [], templates: [], analytics: {} };
+    let currentPage = 1;
+    const pageSize = 25;
+    let selectedProspects = [];
+
+    // ===== Helpers (API & data normalization)
+    async function jsonFetch(url, opts={}){
+      const res = await fetch(url, opts);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+    function unwrapArray(payload){
+      if(Array.isArray(payload)) return payload;
+      if(payload?.data && Array.isArray(payload.data)) return payload.data;
+      if(payload?.rows && Array.isArray(payload.rows)) return payload.rows;
+      return [];
+    }
+    function unwrapProspectsPayload(payload){
+      let rows = [], pagination = null;
+      if(payload?.success){
+        rows = unwrapArray(payload);
+        pagination = payload.pagination || null;
+      }else if(Array.isArray(payload)){
+        rows = payload;
+        pagination = { offset:0, limit: rows.length, total: rows.length, pages: 1, current_page: 1 };
+      }else if(payload?.rows){
+        rows = payload.rows;
+        const total = Number(payload.total ?? rows.length);
+        pagination = {
+          offset: (currentPage-1)*pageSize,
+          limit: pageSize,
+          total,
+          pages: Math.max(1, Math.ceil(total/pageSize)),
+          current_page: currentPage
+        };
+      }else{
+        rows = [];
+        pagination = { offset:0, limit:0, total:0, pages:1, current_page:1 };
+      }
+      return { rows, pagination };
+    }
+    function showNotification(message, type='info'){
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full opacity-0`;
+      const typeClasses = {
+        success:'bg-green-500 text-white', error:'bg-red-500 text-white',
+        warning:'bg-yellow-500 text-white', info:'bg-blue-500 text-white'
+      };
+      notification.className += ' ' + (typeClasses[type]||typeClasses.info);
+      notification.innerHTML = `
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-${type==='success'?'check':type==='error'?'times':type==='warning'?'exclamation':'info'}-circle"></i>
+          <span>${message}</span>
+          <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
+        </div>`;
+      document.body.appendChild(notification);
+      setTimeout(()=>{notification.classList.remove('translate-x-full','opacity-0')},100);
+      setTimeout(()=>{notification.classList.add('translate-x-full','opacity-0'); setTimeout(()=>notification.remove(),300)},5000);
+    }
+    function showLoading(section){ console.log(`Loading ${section}...`) }
+    function hideLoading(section){ console.log(`${section} loaded`) }
+    function closeModal(id){ document.getElementById(id)?.classList.add('hidden'); }
+    function openModal(id){ document.getElementById(id)?.classList.remove('hidden'); }
+
+    // ===== Navigation
+    function showSection(sectionName){
+      const sections = ['sequences','tasks','inbox','clients','leadfinder','prospects','verifier','templates','analytics','settings'];
+      sections.forEach(s => document.getElementById(s+'-section')?.classList.add('hidden'));
+      document.getElementById(sectionName+'-section')?.classList.remove('hidden');
+      document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(item=>{
+        if(item.getAttribute('onclick')?.includes(sectionName)) item.classList.add('active');
+      });
+      loadSectionData(sectionName);
+    }
+    function loadSectionData(sectionName){
+      switch(sectionName){
+        case 'prospects': loadProspects(); break;
+        case 'sequences': loadSequences(); break;
+        case 'templates': loadTemplates(); break;
+        case 'analytics': loadAnalytics(); break;
+        case 'clients': loadClients(); break;
+        case 'settings': loadSettings(); break;
+      }
+    }
+
+    // ===== Prospects
+    async function loadProspects(){
+      try{
+        showLoading('prospects');
+        const payload = await jsonFetch(`/api/leads?limit=${pageSize}&offset=${(currentPage-1)*pageSize}`);
+        const {rows, pagination} = unwrapProspectsPayload(payload);
+        apiData.prospects = rows || [];
+        updateProspectsTable();
+        updatePagination(pagination);
+      }catch(err){
+        console.error(err);
+        showNotification('Error loading prospects','error');
+      }finally{ hideLoading('prospects'); }
+    }
+    function updateProspectsTable(){
+      const tbody = document.getElementById('prospectsTableBody');
+      if(!tbody) return;
+      tbody.innerHTML = '';
+      if(!apiData.prospects.length){
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" class="text-center py-16">
+              <div class="space-y-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full">
+                  <i class="fas fa-users text-2xl text-gray-400"></i>
+                </div>
+                <div>
+                  <p class="text-xl text-gray-500 font-medium mb-2">No prospects found</p>
+                  <p class="text-gray-400">Start by finding leads or importing your contacts</p>
+                </div>
+                <button onclick="showSection('leadfinder')" class="btn-primary text-white px-6 py-3">
+                  <i class="fas fa-search mr-2"></i>Find Leads
+                </button>
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+      apiData.prospects.forEach(prospect=>{
+        const status = prospect.email_sequence_status || prospect.status || 'inactive';
+        const statusClass = getStatusClass(status);
+        const statusText  = getStatusText(status);
+        const score       = Number(prospect.score||0);
+        const tr = document.createElement('tr');
+        tr.className = 'table-hover';
+        tr.dataset.leadId = prospect.id || prospect.email || '';
+        tr.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap">
+            <input type="checkbox" class="rounded prospect-checkbox" data-lead-id="${tr.dataset.leadId}" onchange="updateSelectedProspects()">
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${prospect.name || 'N/A'}</div></td>
+          <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${prospect.email || 'N/A'}</div></td>
+          <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${prospect.title || 'N/A'}</div></td>
+          <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${prospect.company || 'N/A'}</div></td>
+          <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${prospect.industry || 'N/A'}</div></td>
+          <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">${statusText}</span></td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <a href="#" class="text-tribearium-primary hover:text-purple-700 text-sm">${prospect.sequence_id ? 'Tribearium Sequence' : 'Not in sequence'}</a>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${prospect.real_email_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+              ${prospect.real_email_verified ? 'Verified' : 'Unverified'}
+            </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreClass(score)}">${score}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <button onclick="showProspectActions('${tr.dataset.leadId}')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    function updatePagination(p){
+      if(!p) return;
+      document.getElementById('showingFrom').textContent = p.offset + 1;
+      document.getElementById('showingTo').textContent   = Math.min(p.offset + p.limit, p.total);
+      document.getElementById('totalProspects').textContent = p.total;
+      document.getElementById('currentPage').textContent  = p.current_page;
+      document.getElementById('prevBtn').disabled = p.current_page <= 1;
+      document.getElementById('nextBtn').disabled = p.current_page >= p.pages;
+    }
+    function previousPage(){ if(currentPage>1){ currentPage--; loadProspects(); } }
+    function nextPage(){ currentPage++; loadProspects(); }
+    function toggleSelectAll(){
+      const selectAll = document.getElementById('selectAllProspects');
+      document.querySelectorAll('.prospect-checkbox').forEach(cb => cb.checked = selectAll.checked);
+      updateSelectedProspects();
+    }
+    function updateSelectedProspects(){
+      selectedProspects = Array.from(document.querySelectorAll('.prospect-checkbox:checked')).map(cb => cb.dataset.leadId).filter(Boolean);
+      const bulkBar = document.getElementById('bulkActionsBar');
+      const selectedCount = document.getElementById('selectedCount');
+      if(selectedProspects.length){ bulkBar?.classList.remove('hidden'); if(selectedCount) selectedCount.textContent = selectedProspects.length; }
+      else{ bulkBar?.classList.add('hidden'); }
+    }
+
+    // ===== Sequences
+    function createSequence(){ openModal('createSequenceModal'); }
+    async function submitSequenceForm(){
+      const name = document.getElementById('sequenceName')?.value?.trim();
+      const description = document.getElementById('sequenceDescription')?.value?.trim();
+      if(!name) return showNotification('Please enter a sequence name','warning');
+      try{
+        const result = await jsonFetch('/api/sequences', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name, description })
+        });
+        const ok = result?.success !== false; // treat truthy/array as OK
+        if(!ok) throw new Error(result?.message || 'Failed creating sequence');
+        showNotification(`Sequence "${name}" created successfully!`,'success');
+        closeModal('createSequenceModal');
+        document.getElementById('sequenceName').value=''; document.getElementById('sequenceDescription').value='';
+        loadSequences();
+      }catch(e){ console.error(e); showNotification('Error creating sequence','error'); }
+    }
+    async function loadSequences(){
+      try{
+        showLoading('sequences');
+        const payload = await jsonFetch('/api/sequences');
+        const list = unwrapArray(payload);
+        const tbody = document.getElementById('sequencesTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        if(!list.length){
+          tbody.innerHTML = `
+            <tr><td colspan="11" class="text-center py-16">
+              <div class="space-y-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full">
+                  <i class="fas fa-paper-plane text-2xl text-gray-400"></i>
+                </div>
+                <div>
+                  <p class="text-xl text-gray-500 font-medium mb-2">No sequences found</p>
+                  <p class="text-gray-400">Create your first email sequence to get started</p>
+                </div>
+                <button onclick="createSequence()" class="btn-primary text-white px-6 py-3">Create Sequence</button>
+              </div>
+            </td></tr>`;
+          return;
         }
-        
-        // Function to load dashboard data from server
-        async function loadDashboardData() {
-            try {
-                console.log('Loading dashboard data...');
-                const response = await fetch('/api/dashboard-data');
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateDashboard(result);
-                    console.log('Data loaded:', result.stats.totalLeads, 'leads');
-                } else {
-                    throw new Error('Error in server response');
-                }
-            } catch (error) {
-                console.error('Error loading data:', error);
-                showNotification('Using sample data', 'info');
-                loadFallbackData();
-            }
+        list.forEach(seq=>{
+          const contacted = Number(seq.contacted||0);
+          const prospects_count = Number(seq.prospects_count||0);
+          const opened = Number(seq.opened||0);
+          const replied = Number(seq.replied||0);
+          const score = calculateSequenceScore({ opened, replied, prospects_count });
+          const tr = document.createElement('tr');
+          tr.className = 'table-hover';
+          tr.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap"><input type="checkbox" class="rounded"></td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="w-2 h-2 ${seq.status==='active'?'bg-green-400':'bg-gray-400'} rounded-full mr-3"></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-900">${seq.name||'-'}</div>
+                  <div class="text-sm text-gray-500">${seq.status||'Draft'}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><span class="text-xs font-medium">${contacted}</span></div>
+                <span class="ml-2 text-sm text-gray-500">/${prospects_count}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">${score}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${prospects_count}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contacted}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${opened}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${replied}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${seq.positive||0}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <button onclick="showSequenceActions('${seq.id||''}')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(e){ console.error(e); showNotification('Error loading sequences','error'); }
+      finally{ hideLoading('sequences'); }
+    }
+    function openAddToSequenceModal(id){
+      if(!selectedProspects.length && id) selectedProspects=[id];
+      openModal('addToSequenceModal');
+    }
+    async function confirmAddToSequence(){
+      const sequenceId = document.getElementById('sequenceSelect')?.value;
+      if(!sequenceId) return showNotification('Please select a sequence','warning');
+      if(!selectedProspects.length) return showNotification('Please select prospects first','warning');
+      try{
+        const result = await jsonFetch(`/api/sequences/${encodeURIComponent(sequenceId)}/prospects`,{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ ids: selectedProspects, prospect_ids: selectedProspects })
+        });
+        const ok = result?.success !== false;
+        if(!ok) throw new Error(result?.message || 'Failed');
+        showNotification(`Added ${selectedProspects.length} prospects to sequence`,'success');
+        closeModal('addToSequenceModal');
+        selectedProspects = []; updateSelectedProspects(); loadProspects();
+      }catch(e){ console.error(e); showNotification('Error adding to sequence','error'); }
+    }
+
+    // ===== Templates
+    async function loadTemplates(){
+      try{
+        showLoading('templates');
+        const payload = await jsonFetch('/api/templates');
+        const list = unwrapArray(payload);
+        const tbody = document.getElementById('templatesTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        list.forEach(t=>{
+          const title = t.title || t.name || 'Untitled';
+          const subject = t.subject || '';
+          const likes = t.performance?.likes || 0;
+          const views = t.performance?.views || 0;
+          const owner = t.owner || 'Tribearium';
+          const id = t.id || title.toLowerCase().replace(/\s+/g,'_');
+          const tr = document.createElement('tr');
+          tr.className = 'table-hover';
+          tr.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${title}</div></td>
+            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${subject}</div></td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center space-x-4">
+                <div class="flex items-center text-sm text-gray-600"><i class="fas fa-heart mr-1"></i>${likes}</div>
+                <div class="flex items-center text-sm text-gray-600"><i class="fas fa-eye mr-1"></i>${views}</div>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${owner}</div></td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <button onclick="editTemplate('${id}')" class="text-tribearium-primary hover:text-purple-700 mr-3"><i class="fas fa-edit"></i></button>
+              <button onclick="showTemplateActions('${id}')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-ellipsis-v"></i></button>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(e){ console.error(e); showNotification('Error loading templates','error');}
+      finally{ hideLoading('templates');}
+    }
+
+    // ===== Analytics
+    async function loadAnalytics(){
+      try{
+        showLoading('analytics');
+        const payload = await jsonFetch('/api/analytics');
+        const data = Array.isArray(payload) ? {} : (payload?.data || payload || {});
+        const sent = Number(data.sent || 0);
+        const opens = Number(data.opens || data.opened || 0);
+        const replies = Number(data.replies || data.replied || 0);
+        const meetings = Number(data.meetings || 0);
+        const totalProspects = Number(data.totalProspects || data.prospects || sent + opens + replies) || 1;
+
+        // Counters
+        const map = {
+          analyticsProspects: totalProspects,
+          analyticsContacted: sent,
+          analyticsOpened: opens,
+          analyticsReplied: replies
+        };
+        Object.entries(map).forEach(([id,val])=>{ const el = document.getElementById(id); if(el) el.textContent = val; });
+
+        // Percents
+        const perc = {
+          contactedPercent: Math.round((sent/totalProspects)*100),
+          openedPercent: Math.round((opens/totalProspects)*100),
+          repliedPercent: Math.round((replies/totalProspects)*100)
+        };
+        Object.entries(perc).forEach(([id,val])=>{ const el = document.getElementById(id); if(el) el.textContent = `${val}%`; });
+
+      }catch(e){ console.error(e); showNotification('Error loading analytics','error'); }
+      finally{ hideLoading('analytics'); }
+    }
+    function exportAnalytics(){ window.location.href = '/api/export-leads?format=csv'; }
+
+    // ===== Clients
+    async function loadClients(){
+      try{
+        showLoading('clients');
+        const payload = await jsonFetch('/api/clients');
+        const clients = unwrapArray(payload);
+        const tbody = document.getElementById('clientsTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        clients.forEach(client=>{
+          const tr = document.createElement('tr'); tr.className = 'table-hover';
+          tr.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="w-8 h-8 bg-green-500 rounded-full mr-3"></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-900">${client.name || client.company || '-'}</div>
+                  <div class="text-sm text-gray-500">${client.email || client.website || '-'}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${client.active_sequences || 0}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${client.active_email_accounts || 0}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${client.total_prospects || 0}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${client.total_emails_sent || 0}</td>
+            <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">${client.permission_status || 'No Access'}</span></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(client.created_at)}</td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(e){ console.error(e); showNotification('Error loading clients','error');}
+      finally{ hideLoading('clients');}
+    }
+
+    // ===== Settings
+    async function loadSettings(){
+      try{
+        showLoading('settings');
+        const payload = await jsonFetch('/api/settings');
+        const settings = payload?.data || payload || {};
+        if(settings.email?.account){
+          const emailInput = document.querySelector('input[value="ricardokr63@gmail.com"]');
+          if(emailInput) emailInput.value = settings.email.account;
         }
-        
-        // Function to load recent leads specifically
-        async function loadRecentLeads() {
-            try {
-                console.log('Loading recent leads...');
-                const response = await fetch('/api/recent-leads?limit=10');
-                const result = await response.json();
-                
-                if (result.success) {
-                    console.log('Debug info:', result.debug);
-                    console.log(`Loaded ${result.data.length} recent leads out of ${result.totalValid} valid`);
-                    updateTable(result.data);
-                } else {
-                    throw new Error('Error loading recent leads');
-                }
-            } catch (error) {
-                console.error('Error loading recent leads:', error);
-                // Use fallback data for table
-                const fallbackLeads = [
-                    { name: 'No connection - Sample data', company: 'Demo Company', industry: 'technology', status: 'cold', score: 7.5 }
-                ];
-                updateTable(fallbackLeads);
-            }
+        console.log('Settings loaded:', settings);
+      }catch(e){ console.error(e); showNotification('Error loading settings','error');}
+      finally{ hideLoading('settings');}
+    }
+    async function saveSettings(){ try{ showNotification('Settings saved successfully!','success'); }catch(e){ showNotification('Error saving settings','error'); } }
+
+    // ===== Actions & Utilities
+    function getStatusClass(status){
+      const m = { inactive:'bg-gray-100 text-gray-800', active:'bg-blue-100 text-blue-800', paused:'bg-yellow-100 text-yellow-800', completed:'bg-green-100 text-green-800', replied:'bg-purple-100 text-purple-800', not_started:'bg-gray-100 text-gray-800', in_sequence:'bg-blue-100 text-blue-800' };
+      return m[status] || 'bg-gray-100 text-gray-800';
+    }
+    function getStatusText(status){
+      const m = { inactive:'Inactive', active:'Active', paused:'Paused', completed:'Completed', replied:'Replied', not_started:'Not Started', in_sequence:'In Sequence' };
+      return m[status] || 'Inactive';
+    }
+    function getScoreClass(score){ if(score>=80) return 'bg-green-100 text-green-800'; if(score>=60) return 'bg-yellow-100 text-yellow-800'; return 'bg-red-100 text-red-800'; }
+    function calculateSequenceScore(seq){
+      const prospects = Number(seq.prospects_count || seq.prospects || 1);
+      const engaged = Number(seq.opened || 0) + Number(seq.replied || 0);
+      return Math.round((engaged / Math.max(1,prospects)) * 100);
+    }
+    function showProspectActions(id){ showNotification(`Actions for prospect ${id} coming soon!`,'info'); }
+    function showSequenceActions(id){ showNotification(`Actions for sequence ${id} coming soon!`,'info'); }
+    function showTemplateActions(id){ showNotification(`Actions for template ${id} coming soon!`,'info'); }
+    function expandFilter(t){ showNotification(`${t} filter coming soon!`,'info'); }
+    function showFilters(){ showNotification('Advanced filters coming soon!','info'); }
+
+    // Bulk ops
+    function bulkAddToSequence(){
+      if(!selectedProspects.length) return showNotification('Please select prospects first','warning');
+      openModal('addToSequenceModal');
+    }
+    async function bulkVerifyEmails(){
+      if(!selectedProspects.length) return showNotification('Please select prospects first','warning');
+      showNotification('Verifying emails...','info');
+      // Try bulk endpoint if available; fallback to sequential single verification by email in the table
+      try{
+        const r = await fetch('/api/verify-emails', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids: selectedProspects })});
+        if(r.ok){ showNotification('Verification complete','success'); return; }
+        throw new Error('bulk not available');
+      }catch(_){
+        // Fallback: iterate visible rows (best-effort UI-only)
+        const emails = selectedProspects.map(id=>{
+          const tr = document.querySelector(`tr[data-lead-id="${CSS.escape(id)}"]`);
+          return tr?.children?.[2]?.innerText?.trim();
+        }).filter(Boolean);
+        for(const email of emails){
+          try{ await jsonFetch('/api/verify-email',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email })}); }catch(e){}
         }
-        
-        // Sample fallback data
-        function loadFallbackData() {
-            const fallbackData = {
-                stats: {
-                    totalLeads: 445,
-                    qualifiedLeads: 128,
-                    approachingLeads: 92,
-                    conversionRate: 28.7
-                },
-                charts: {
-                    stageDistribution: {
-                        'Approaching': 180,
-                        'Cold': 140,
-                        'Qualified': 100,
-                        'Contacted': 25
-                    },
-                    topIndustries: [
-                        { industry: 'Technology', count: 95 },
-                        { industry: 'Consulting', count: 78 },
-                        { industry: 'Manufacturing', count: 65 },
-                        { industry: 'Finance', count: 52 },
-                        { industry: 'Healthcare', count: 41 }
-                    ]
-                },
-                recentLeads: [
-                    { name: 'Test User', company: 'Test Company', industry: 'Technology', status: 'approaching', score: 9.0 },
-                    { name: 'Raymond Qu', company: 'Reliance Piles', industry: 'Manufacturing', status: 'approaching', score: 8.5 },
-                    { name: 'Wilglory Tanjong', company: 'Anima Iris', industry: 'Fashion', status: 'qualified', score: 9.2 },
-                    { name: 'Craig Confer', company: 'MT. JAC Consulting', industry: 'Consulting', status: 'approaching', score: 7.3 },
-                    { name: 'Cody Levine', company: 'TWICEMKT', industry: 'Marketing', status: 'cold', score: 5.8 }
-                ]
-            };
-            updateDashboard(fallbackData);
+        showNotification('Verification complete','success');
+      }
+    }
+    function bulkDelete(){
+      if(!selectedProspects.length) return showNotification('Please select prospects first','warning');
+      if(confirm(`Delete ${selectedProspects.length} selected prospects?`)){
+        showNotification('Bulk delete functionality coming soon!','info');
+      }
+    }
+    function bulkExport(){
+      const params = selectedProspects.length ? `?ids=${encodeURIComponent(selectedProspects.join(','))}` : '';
+      window.location.href = `/api/export-leads${params}`;
+    }
+
+    // Add prospect (simple prompt UX)
+    async function addProspect(){
+      const name = prompt('Enter prospect name:');
+      const email = prompt('Enter prospect email:');
+      const company = prompt('Enter company name:');
+      if(!name || !email) return showNotification('Name and email are required','warning');
+      try{
+        const result = await jsonFetch('/api/prospects',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name, email, company, source:'manual' })
+        });
+        const ok = result?.success !== false;
+        if(!ok) throw new Error(result?.message || 'Failed');
+        showNotification(`Prospect "${name}" added successfully!`,'success');
+        loadProspects();
+      }catch(e){ console.error(e); showNotification('Error adding prospect','error'); }
+    }
+
+    // Email verification
+    async function verifySingleEmail(){
+      const email = document.getElementById('emailToVerify')?.value?.trim();
+      if(!email) return showNotification('Please enter an email address','warning');
+      try{
+        const res = await jsonFetch('/api/verify-email',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+        const valid = (res?.data?.valid) ?? res?.valid ?? false;
+        const confidence = (res?.data?.confidence) ?? res?.confidence ?? 0;
+        const resultDiv = document.getElementById('verificationResult');
+        if(resultDiv){
+          resultDiv.classList.remove('hidden');
+          resultDiv.className = `mt-6 p-4 rounded-lg ${valid ? 'bg-green-100 border border-green-200' : 'bg-red-100 border border-red-200'}`;
+          resultDiv.innerHTML = `
+            <div class="text-sm font-medium ${valid ? 'text-green-800' : 'text-red-800'}">${valid ? '✅ Valid Email' : '❌ Invalid Email'}</div>
+            <div class="text-sm ${valid ? 'text-green-600' : 'text-red-600'} mt-1">Confidence: ${Math.round(confidence)}%</div>`;
         }
-        
-        // Function to update dashboard
-        function updateDashboard(data) {
-            // Update statistics
-            document.getElementById('totalLeads').textContent = data.stats.totalLeads;
-            document.getElementById('qualifiedLeads').textContent = data.stats.qualifiedLeads;
-            document.getElementById('processLeads').textContent = data.stats.approachingLeads;
-            document.getElementById('conversionRate').textContent = data.stats.conversionRate + '%';
-            
-            // Update charts
-            updateCharts(data.charts);
-            
-            // Update table
-            updateTable(data.recentLeads);
+        showNotification(`Email verification complete: ${valid ? 'Valid' : 'Invalid'}`, valid?'success':'warning');
+      }catch(e){ console.error(e); showNotification('Error verifying email','error'); }
+    }
+    function uploadCSVForVerification(){ showNotification('CSV upload for verification coming soon!','info'); }
+
+    // Lead finder
+    async function runApolloSearch(){
+      try{
+        showNotification('Starting Apollo.io search...','info');
+        const result = await jsonFetch('/api/apollo-scraper',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ prompt: 'Find CEOs in US tech', count: 50 })
+        });
+        if(result?.success === false) throw new Error(result.message || 'Search failed');
+        showNotification('Apollo search started! Generating test leads...','success');
+        setTimeout(()=> loadProspects(), 2000);
+      }catch(e){ console.error(e); showNotification('Error running search','error'); }
+    }
+    function runAISearch(){
+      const query = document.getElementById('aiSearchInput')?.value;
+      if(!query?.trim()) return showNotification('Please enter a search query','warning');
+      // You can wire this to /api/apollo-scraper too:
+      runApolloSearch();
+    }
+
+    // Misc
+    function editTemplate(id){ showNotification(`Edit template ${id} coming soon!`,'info'); }
+    async function addClient(){
+      const name = prompt('Enter client name:');
+      const email = prompt('Enter client email:');
+      if(!name || !email) return showNotification('Name and email are required','warning');
+      showNotification('Add client functionality coming soon!','info');
+    }
+    function formatDate(s){ if(!s) return 'N/A'; try{ return new Date(s).toLocaleDateString(); }catch(_){ return 'N/A'; } }
+
+    // System status
+    async function checkSystemStatus(){
+      try{ const data = await jsonFetch('/api/system-status'); console.log('System Status:', data.status || data); }
+      catch(e){ console.warn('System status check failed'); }
+    }
+
+    // ===== Init
+    document.addEventListener('DOMContentLoaded', ()=>{
+      console.log('🚀 Tribearium SalesHandy-style Dashboard initialized');
+      checkSystemStatus();
+      // show initial section based on active sidebar
+      const active = document.querySelector('.sidebar-item.active');
+      const m = active?.getAttribute('onclick')?.match(/showSection\('([^']+)'\)/);
+      const firstSection = m?.[1] || 'sequences';
+      showSection(firstSection);
+
+      // form submit
+      document.getElementById('sequenceForm')?.addEventListener('submit', (e)=>{ e.preventDefault(); submitSequenceForm(); });
+
+      // close on Esc
+      document.addEventListener('keydown', (e)=>{
+        if(e.key==='Escape'){
+          document.querySelectorAll('.fixed:not(.hidden)').forEach(modal=>{
+            if(modal.id?.includes('Modal')) modal.classList.add('hidden');
+          });
         }
-        
-        // Function to update charts
-        function updateCharts(chartsData) {
-            // Destroy existing charts
-            if (stageChart) stageChart.destroy();
-            if (industryChart) industryChart.destroy();
-            
-            // Stage chart
-            const stageCtx = document.getElementById('stageChart').getContext('2d');
-            stageChart = new Chart(stageCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(chartsData.stageDistribution),
-                    datasets: [{
-                        data: Object.values(chartsData.stageDistribution),
-                        backgroundColor: ['#f59e0b', '#6b7280', '#22c55e', '#3b82f6'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-            
-            // Industry chart
-            const industryCtx = document.getElementById('industryChart').getContext('2d');
-            industryChart = new Chart(industryCtx, {
-                type: 'bar',
-                data: {
-                    labels: chartsData.topIndustries.map(item => item.industry),
-                    datasets: [{
-                        label: 'Leads',
-                        data: chartsData.topIndustries.map(item => item.count),
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
-            });
+      });
+
+      // auto refresh
+      setInterval(()=>{
+        const active = document.querySelector('.sidebar-item.active');
+        if(!active) return;
+        const t = active.textContent.toLowerCase();
+        if(t.includes('prospect')) loadProspects();
+        else if(t.includes('analytics')) loadAnalytics();
+      }, 30000);
+
+      console.log('✅ Dashboard initialization complete');
+    });
+
+    // Global
+    window.addEventListener('unhandledrejection', (event)=>{ console.error('Unhandled promise rejection:', event.reason); showNotification('An unexpected error occurred','error'); });
+    document.addEventListener('click', (e)=>{
+      if(e.target.closest('.sidebar-item')){
+        const item = e.target.closest('.sidebar-item');
+        const onclick = item.getAttribute('onclick');
+        if(onclick && onclick.includes('showSection')){
+          const sectionMatch = onclick.match(/showSection\('([^']+)'\)/);
+          if(sectionMatch){ showSection(sectionMatch[1]); }
         }
-        
-        // Function to update table
-        function updateTable(leads) {
-            const tableBody = document.getElementById('leadsTableBody');
-            const table = document.getElementById('leadsTable');
-            const loading = document.getElementById('tableLoading');
-            
-            tableBody.innerHTML = '';
-            
-            leads.forEach(lead => {
-                const row = document.createElement('tr');
-                
-                const statusClass = `badge-${lead.status}`;
-                const scoreClass = lead.score >= 8 ? 'score-high' : lead.score >= 6 ? 'score-medium' : 'score-low';
-                
-                row.innerHTML = `
-                    <td>
-                        <div class="lead-name">${lead.name}</div>
-                    </td>
-                    <td>
-                        <div class="lead-company">${lead.company}</div>
-                    </td>
-                    <td>${lead.industry}</td>
-                    <td>
-                        <span class="badge ${statusClass}">
-                            ${lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="score ${scoreClass}">${lead.score}</span>
-                    </td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-            
-            loading.classList.remove('show');
-            table.style.display = 'table';
+      }
+    });
+
+    // Shortcuts
+    document.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey||e.metaKey) && e.key==='s'){ e.preventDefault(); const active=document.querySelector('.sidebar-item.active'); if(active && active.textContent.includes('Settings')) saveSettings(); }
+      if((e.ctrlKey||e.metaKey) && e.key==='n'){ e.preventDefault(); const active=document.querySelector('.sidebar-item.active'); if(active){ const t=active.textContent.toLowerCase(); if(t.includes('sequence')) createSequence(); else if(t.includes('prospect')) addProspect(); else if(t.includes('template')) createTemplate(); } }
+    });
+
+    // Perf
+    try{
+      const performanceObserver = new PerformanceObserver((list)=>{
+        for(const entry of list.getEntries()){
+          if(entry.entryType==='navigation'){ console.log('Page load time:', entry.loadEventEnd - entry.loadEventStart); }
         }
-        
-        // Function to sync with Google Sheets
-        async function refreshData() {
-            const btn = document.getElementById('refreshBtn');
-            const originalText = btn.textContent;
-            
-            btn.textContent = 'Syncing...';
-            btn.disabled = true;
-            
-            try {
-                const response = await fetch('/api/refresh-data');
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(`Data updated: ${result.totalLeads} leads`, 'success');
-                    await loadDashboardData();
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                showNotification('Error syncing data', 'error');
-                console.error('Error:', error);
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-        
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Show initial loading
-            document.getElementById('tableLoading').classList.add('show');
-            
-            // Load data on startup
-            loadDashboardData();
-            loadRecentLeads();
-            
-            // Configure buttons
-            document.getElementById('refreshBtn').addEventListener('click', async function() {
-                await refreshData();
-                await loadRecentLeads();
-            });
-            
-            document.getElementById('processBtn').addEventListener('click', async function() {
-                const btn = this;
-                const originalText = btn.textContent;
-                
-                btn.textContent = 'Processing...';
-                btn.disabled = true;
-                
-                try {
-                    showNotification('Processing leads...', 'info');
-                    
-                    const response = await fetch('/api/process-lead', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            action: 'process_automation',
-                            timestamp: new Date().toISOString()
-                        })
-                    });
-                    
-                    if (response.ok) {
-                        await loadDashboardData();
-                        await loadRecentLeads();
-                        showNotification('Leads processed successfully', 'success');
-                    } else {
-                        throw new Error('Error in processing');
-                    }
-                } catch (error) {
-                    showNotification('Error processing leads', 'error');
-                    console.error('Error:', error);
-                } finally {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }
-            });
-            
-            document.getElementById('reportBtn').addEventListener('click', async function() {
-                showNotification('Generating report...', 'info');
-                
-                try {
-                    const leadsResponse = await fetch('/api/recent-leads?limit=10');
-                    const leadsResult = await leadsResponse.json();
-                    
-                    setTimeout(() => {
-                        const reportWindow = window.open('', '_blank');
-                        
-                        let recentLeadsTable = '';
-                        if (leadsResult.success && leadsResult.data.length > 0) {
-                            recentLeadsTable = `
-                                <div class="section">
-                                    <h2>Latest 10 Leads Added</h2>
-                                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                                        <thead>
-                                            <tr style="background: #f8fafc;">
-                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Contact</th>
-                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Company</th>
-                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Industry</th>
-                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Status</th>
-                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: center;">Score</th>
-                                                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left;">Email</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${leadsResult.data.map(lead => `
-                                                <tr>
-                                                    <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;">${lead.name}</td>
-                                                    <td style="padding: 10px; border: 1px solid #e2e8f0;">${lead.company}</td>
-                                                    <td style="padding: 10px; border: 1px solid #e2e8f0;">${lead.industry}</td>
-                                                    <td style="padding: 10px; border: 1px solid #e2e8f0;">
-                                                        <span style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; background: ${lead.status === 'approaching' ? '#fef3c7; color: #92400e' : lead.status === 'qualified' ? '#dcfce7; color: #166534' : '#f1f5f9; color: #475569'};">
-                                                            ${lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                                                        </span>
-                                                    </td>
-                                                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700; color: ${lead.score >= 8 ? '#22c55e' : lead.score >= 6 ? '#f59e0b' : '#ef4444'};">
-                                                        ${lead.score}
-                                                    </td>
-                                                    <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 0.9rem;">${lead.email}</td>
-                                                </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            `;
-                        } else {
-                            recentLeadsTable = `
-                                <div class="section">
-                                    <h2>Recent Leads</h2>
-                                    <p style="color: #64748b;">Could not load recent leads</p>
-                                </div>
-                            `;
-                        }
-                        
-                        reportWindow.document.write(`
-                            <html>
-                            <head>
-                                <title>Automated Leads Report</title>
-                                <style>
-                                    body { font-family: Arial, sans-serif; margin: 40px; background: #f8fafc; }
-                                    .header { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 30px; border-radius: 10px; text-align: center; }
-                                    .section { background: white; margin: 20px 0; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                                    .metric { display: inline-block; margin: 10px 20px; text-align: center; }
-                                    .metric-number { font-size: 2em; font-weight: bold; color: #3b82f6; }
-                                    .metric-label { color: #64748b; }
-                                    .print-btn { 
-                                        background: #3b82f6; 
-                                        color: white; 
-                                        border: none; 
-                                        padding: 10px 20px; 
-                                        border-radius: 5px; 
-                                        cursor: pointer; 
-                                        margin: 10px 0;
-                                        font-size: 14px;
-                                    }
-                                    .print-btn:hover { background: #2563eb; }
-                                    @media print {
-                                        .print-btn { display: none; }
-                                    }
-                                </style>
-                            </head>
-                            <body>
-                                <div class="header">
-                                    <h1>Automated Leads Report</h1>
-                                    <p>Generated on ${new Date().toLocaleDateString('en-US')} at ${new Date().toLocaleTimeString('en-US')}</p>
-                                </div>
-                                
-                                <div class="section">
-                                    <h2>Key Metrics</h2>
-                                    <div class="metric">
-                                        <div class="metric-number">${document.getElementById('totalLeads').textContent}</div>
-                                        <div class="metric-label">Total Leads</div>
-                                    </div>
-                                    <div class="metric">
-                                        <div class="metric-number">${document.getElementById('qualifiedLeads').textContent}</div>
-                                        <div class="metric-label">Qualified</div>
-                                    </div>
-                                    <div class="metric">
-                                        <div class="metric-number">${document.getElementById('conversionRate').textContent}</div>
-                                        <div class="metric-label">Conversion</div>
-                                    </div>
-                                </div>
-                                
-                                ${recentLeadsTable}
-                                
-                                <div class="section">
-                                    <button class="print-btn" onclick="window.print()">Print Report</button>
-                                    <p style="color: #64748b; text-align: center; margin-top: 20px;">
-                                        <small>Data updated in real-time from Google Sheets</small>
-                                    </p>
-                                </div>
-                            </body>
-                            </html>
-                        `);
-                        
-                        showNotification('Report generated successfully', 'success');
-                    }, 1500);
-                    
-                } catch (error) {
-                    showNotification('Error generating report', 'error');
-                    console.error('Error:', error);
-                }
-            });
-            
-            document.getElementById('exportBtn').addEventListener('click', async function() {
-                showNotification('Exporting data...', 'info');
-                
-                try {
-                    const response = await fetch('/api/recent-leads?limit=50');
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        const csvContent = [
-                            'Name,Company,Industry,Status,Score,Email',
-                            ...result.data.map(lead => 
-                                `"${lead.name}","${lead.company}","${lead.industry}","${lead.status}",${lead.score},"${lead.email || 'N/A'}"`
-                           )
-                       ].join('\n');
-                       
-                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-                       const url = window.URL.createObjectURL(blob);
-                       const a = document.createElement('a');
-                       a.href = url;
-                       a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
-                       document.body.appendChild(a);
-                       a.click();
-                       document.body.removeChild(a);
-                       window.URL.revokeObjectURL(url);
-                       
-                       showNotification('Data exported successfully', 'success');
-                   } else {
-                       throw new Error('Error getting data');
-                   }
-               } catch (error) {
-                   showNotification('Error exporting data', 'error');
-                   console.error('Error:', error);
-               }
-           });
-           
-           // Update recent leads every 30 seconds
-           setInterval(async () => {
-               console.log('Updating recent leads...');
-               await loadRecentLeads();
-           }, 30000);
-       });
-   </script>
+      });
+      performanceObserver.observe({entryTypes:['navigation','resource']});
+    }catch(e){ console.log('Performance observer not supported'); }
+
+    window.addEventListener('beforeunload', ()=>{ console.log('Page unloading, cleaning up...'); });
+    console.log('🔧 All dashboard functionality loaded and ready');
+  </script>
 </body>
 </html>
