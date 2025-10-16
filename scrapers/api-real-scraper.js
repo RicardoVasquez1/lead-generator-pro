@@ -1,17 +1,21 @@
-// scrapers/api-real-scraper.js - Apollo.io Integration via Apify for SalesHandy-style Lead Generation
+// scrapers/api-real-scraper.js - ScraperCity Direct + LinkedIn Enrichment
 require('dotenv').config();
 const axios = require('axios');
+const Papa = require('papaparse');
 
-class ApolloLeadScraper {
+class ScraperCityDirectScraper {
     constructor() {
         this.serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
-        this.apifyApiKey = process.env.APIFY_API_KEY;
-        this.hunterApiKey = process.env.HUNTER_API_KEY; // Backup for email verification
         
-        // Apollo.io scraper actor ID from Apify
-        this.apolloActorId = 'code_crafter/apollo-io-scraper';
+        // ScraperCity configuration
+        this.scraperCityApiKey = process.env.SCRAPERCITY_API_KEY || '8c547dc5-b997-466b-8c59-03cacb45778a';
+        this.scraperCityBaseUrl = 'https://app.scrapercity.com/api/v1';
         
-        // Priority industries for Tribearium targeting
+        // SIEMPRE 500 contactos máximo
+        this.MAX_CONTACTS = 500;
+        // TOP leads para enriquecer con LinkedIn
+        this.TOP_LEADS_FOR_LINKEDIN = 10;
+        
         this.priorityIndustries = [
             'Manufacturing', 'Construction', 'Logistics & Supply Chain', 'Industrial Services', 'Waste Management',
             'HVAC', 'Electrical Services', 'Plumbing', 'Facility Maintenance', 'Auto Repair', 'Fleet Services',
@@ -40,283 +44,656 @@ class ApolloLeadScraper {
             'Admin Manager', 'Finance Manager', 'IT Manager', 'Facilities Manager',
             'Head of Finance', 'Head of Operations'
         ];
-
-        this.companySizeTargets = {
-            min: 11,
-            max: 500,
-            ideal_max: 200
-        };
     }
 
-    // Main scraping method for SalesHandy integration
+    // ========== FUNCIÓN PRINCIPAL ==========
+    
     async scrapeLeadsFromApollo(searchParams = {}) {
-        console.log('🚀 Starting Apollo.io lead scraping via Apify...');
+        console.log('🚀 Starting ScraperCity Direct scraping...');
+        console.log('📊 Max contacts limited to:', this.MAX_CONTACTS);
+        console.log('⭐ Will enrich TOP', this.TOP_LEADS_FOR_LINKEDIN, 'leads with LinkedIn');
         console.log('Search parameters:', JSON.stringify(searchParams, null, 2));
         
-        if (!this.apifyApiKey) {
-            console.error('❌ APIFY_API_KEY not found in environment variables');
-            return this.generateFallbackLeads(searchParams.count || 25);
-        }
-
         try {
-            // Build Apollo search configuration
-            const apolloConfig = this.buildApolloSearchConfig(searchParams);
-            console.log('🔧 Apollo configuration:', JSON.stringify(apolloConfig, null, 2));
+            // Forzar máximo 500
+            searchParams.count = Math.min(searchParams.count || 500, this.MAX_CONTACTS);
             
-            // Start Apify actor run
-            const runResponse = await this.startApifyRun(apolloConfig);
-            const runId = runResponse.data.data.id;
+            const results = await this.scrapeWithScraperCity(searchParams);
             
-            console.log(`⏳ Apify run started: ${runId}`);
-            console.log('🔄 Waiting for results...');
-            
-            // Wait for completion and get results
-            const results = await this.waitForResults(runId);
-            
-            if (results && results.length > 0) {
-                console.log(`📊 Raw results from Apollo: ${results.length} contacts`);
+            if (results.success && results.totalLeads > 0) {
+                console.log('✅ ScraperCity Direct successful!');
                 
-                // Process and enhance results
-                const processedLeads = await this.processApolloResults(results);
-                
-                // Send to server
-                if (processedLeads.length > 0) {
-                    await this.sendLeadsToServer(processedLeads);
+                // NUEVO: Enriquecer TOP 10 con LinkedIn
+                if (results.leads && results.leads.length > 0) {
+                    const enrichedTopLeads = await this.enrichTopLeadsWithLinkedIn(results.leads);
+                    
+                    // Actualizar los leads enriquecidos en el array principal
+                    if (enrichedTopLeads && enrichedTopLeads.length > 0) {
+                        enrichedTopLeads.forEach(enrichedLead => {
+                            const index = results.leads.findIndex(l => l.email === enrichedLead.email);
+                            if (index !== -1) {
+                                results.leads[index] = enrichedLead;
+                            }
+                        });
+                        results.enrichedLeadsCount = enrichedTopLeads.length;
+                    }
                 }
                 
-                return {
-                    success: true,
-                    totalLeads: processedLeads.length,
-                    leads: processedLeads,
-                    source: 'apollo_io_apify'
-                };
+                return results;
             } else {
-                console.log('⚠️ No results from Apollo, generating fallback data...');
-                return this.generateFallbackLeads(searchParams.count || 25);
+                throw new Error('ScraperCity returned no results');
             }
             
         } catch (error) {
-            console.error('❌ Apollo scraping error:', error.message);
-            console.log('🧪 Generating fallback test data...');
-            return this.generateFallbackLeads(searchParams.count || 25);
-        }
-    }
-
-    // Build Apollo.io search configuration
-    buildApolloSearchConfig(params) {
-        const config = {
-            // Basic search parameters
-            maxItems: params.count || 50,
-            includeEmails: true,
-            includePhones: true,
+            console.error('❌ ScraperCity Direct error:', error.message);
             
-            // Search filters
-            searchFilters: {}
-        };
-
-        // Job titles / roles
-        if (params.jobTitle || params.role) {
-            config.searchFilters.personTitles = [params.jobTitle || params.role];
-        } else {
-            // Default to our target titles
-            config.searchFilters.personTitles = this.targetTitles.slice(0, 10);
+            return {
+                success: false,
+                error: error.message,
+                totalLeads: 0,
+                leads: [],
+                source: 'scrapercity_direct_error',
+                message: `ScraperCity Direct failed: ${error.message}`
+            };
         }
-
-        // Location
-        if (params.location) {
-            config.searchFilters.personLocations = [params.location];
-        } else {
-            // Default high-value locations
-            config.searchFilters.personLocations = [
-                'United States', 'Miami, FL', 'Dallas, TX', 'Atlanta, GA', 'Phoenix, AZ'
-            ];
-        }
-
-        // Industry
-        if (params.industry) {
-            config.searchFilters.organizationIndustries = [params.industry];
-        } else {
-            // Use priority industries
-            config.searchFilters.organizationIndustries = this.priorityIndustries.slice(0, 15);
-        }
-
-        // Company size
-        if (params.companySize || params.employeeCount) {
-            config.searchFilters.organizationNumEmployeesRanges = [params.companySize || params.employeeCount];
-        } else {
-            config.searchFilters.organizationNumEmployeesRanges = ['11-50', '51-200', '201-500'];
-        }
-
-        // Revenue
-        if (params.revenue) {
-            config.searchFilters.organizationAnnualRevenueRanges = [params.revenue];
-        }
-
-        // Keywords
-        if (params.keywords) {
-            config.searchFilters.keywords = params.keywords;
-        }
-
-        return config;
     }
 
-    // Start Apify actor run
-    async startApifyRun(config) {
-        const apifyInput = {
-            startUrls: [{ url: 'https://app.apollo.io/#/people' }],
-            maxItems: config.maxItems,
-            searchFilters: config.searchFilters,
-            includeEmails: config.includeEmails,
-            includePhones: config.includePhones,
-            outputFormat: 'json'
-        };
-
-        console.log('📡 Starting Apify actor with input:', JSON.stringify(apifyInput, null, 2));
-
-        return await axios.post(
-            `https://api.apify.com/v2/acts/${this.apolloActorId}/runs`,
-            apifyInput,
-            {
-                headers: {
-                    'Authorization': `Bearer ${this.apifyApiKey}`,
-                    'Content-Type': 'application/json'
+    // ========== LINKEDIN ENRICHMENT FUNCTION ==========
+    
+    async enrichTopLeadsWithLinkedIn(allLeads) {
+        console.log('');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🎯 LINKEDIN ENRICHMENT PROCESS');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        try {
+            // Filtrar y ordenar para encontrar los mejores leads
+            const topLeads = allLeads
+                .filter(lead => {
+                    // Solo leads con LinkedIn URL
+                    const hasLinkedIn = lead.linkedin_url && 
+                                      lead.linkedin_url.length > 0 && 
+                                      lead.linkedin_url.includes('linkedin.com');
+                    if (!hasLinkedIn) return false;
+                    
+                    // Score mínimo de 60
+                    if (lead.score < 60) return false;
+                    
+                    return true;
+                })
+                .sort((a, b) => {
+                    // Sistema de puntuación para ordenar
+                    let scoreA = a.score || 0;
+                    let scoreB = b.score || 0;
+                    
+                    // Mega bonus por ser CEO/Owner/Founder (máxima prioridad)
+                    const titleA = (a.title || '').toLowerCase();
+                    const titleB = (b.title || '').toLowerCase();
+                    
+                    if (titleA.includes('ceo') || titleA.includes('owner') || titleA.includes('founder')) {
+                        scoreA += 50;
+                    }
+                    if (titleB.includes('ceo') || titleB.includes('owner') || titleB.includes('founder')) {
+                        scoreB += 50;
+                    }
+                    
+                    // Bonus por C-Level
+                    if (titleA.includes('cfo') || titleA.includes('coo') || titleA.includes('cto')) {
+                        scoreA += 30;
+                    }
+                    if (titleB.includes('cfo') || titleB.includes('coo') || titleB.includes('cto')) {
+                        scoreB += 30;
+                    }
+                    
+                    // Bonus por VP/Director
+                    if (titleA.includes('vp') || titleA.includes('vice president') || titleA.includes('director')) {
+                        scoreA += 20;
+                    }
+                    if (titleB.includes('vp') || titleB.includes('vice president') || titleB.includes('director')) {
+                        scoreB += 20;
+                    }
+                    
+                    // Bonus por tamaño ideal de empresa (50-500 empleados)
+                    const empA = a.employee_count || 0;
+                    const empB = b.employee_count || 0;
+                    
+                    if (empA >= 50 && empA <= 500) scoreA += 15;
+                    if (empB >= 50 && empB <= 500) scoreB += 15;
+                    
+                    // Bonus por tener teléfono
+                    if (a.phone) scoreA += 5;
+                    if (b.phone) scoreB += 5;
+                    
+                    return scoreB - scoreA;
+                })
+                .slice(0, this.TOP_LEADS_FOR_LINKEDIN); // TOP 10
+            
+            console.log(`✨ Found ${topLeads.length} premium leads for LinkedIn enrichment`);
+            
+            if (topLeads.length === 0) {
+                console.log('⚠️ No leads qualified for LinkedIn enrichment');
+                return [];
+            }
+            
+            // Mostrar los leads seleccionados
+            console.log('\n📋 Selected TOP leads:');
+            topLeads.forEach((lead, index) => {
+                console.log(`  ${index + 1}. ${lead.name} - ${lead.title} at ${lead.company} (Score: ${lead.score})`);
+            });
+            
+            // Extraer URLs de LinkedIn
+            const linkedInUrls = topLeads.map(lead => lead.linkedin_url);
+            
+            console.log(`\n💰 Estimated cost: $${(topLeads.length * 0.02).toFixed(2)} for LinkedIn enrichment`);
+            console.log('📡 Calling LinkedIn Scraper API...');
+            
+            // Llamar a LinkedIn Scraper
+            const enrichResponse = await axios.post(
+                `${this.scraperCityBaseUrl}/scrape/linkedin`,
+                {
+                    profileUrls: linkedInUrls
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.scraperCityApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 120000
+                }
+            );
+            
+            if (enrichResponse.data && enrichResponse.data.runId) {
+                console.log(`⏳ LinkedIn enrichment started: ${enrichResponse.data.runId}`);
+                
+                // Esperar resultados de LinkedIn
+                const linkedInData = await this.waitForLinkedInResults(enrichResponse.data.runId);
+                
+                if (linkedInData && linkedInData.length > 0) {
+                    console.log(`✅ LinkedIn enrichment completed for ${linkedInData.length} profiles`);
+                    
+                    // Merge datos de LinkedIn con los leads originales
+                    const enrichedLeads = this.mergeLinkedInData(topLeads, linkedInData);
+                    
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log(`⭐ ${enrichedLeads.length} PREMIUM LEADS ENRICHED`);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    
+                    return enrichedLeads;
                 }
             }
-        );
+            
+            console.log('⚠️ LinkedIn enrichment did not return results');
+            return topLeads; // Devolver los leads sin enriquecer
+            
+        } catch (error) {
+            console.error('❌ LinkedIn enrichment error:', error.message);
+            console.log('⚠️ Continuing with basic leads data');
+            return []; // No bloquear el proceso principal
+        }
     }
 
-    // Wait for Apify run completion and get results
-    async waitForResults(runId, maxAttempts = 30) {
+    // Esperar resultados de LinkedIn Scraper
+    async waitForLinkedInResults(runId, maxAttempts = 30) {
         let attempts = 0;
         
+        console.log(`⏳ Waiting for LinkedIn results: ${runId}`);
+        
         while (attempts < maxAttempts) {
-            await this.delay(10000); // Wait 10 seconds
+            attempts++;
+            await this.delay(5000); // 5 segundos entre intentos
             
             try {
                 const statusResponse = await axios.get(
-                    `https://api.apify.com/v2/acts/${this.apolloActorId}/runs/${runId}`,
+                    `${this.scraperCityBaseUrl}/scrape/status/${runId}`,
                     {
                         headers: {
-                            'Authorization': `Bearer ${this.apifyApiKey}`
-                        }
+                            'Authorization': `Bearer ${this.scraperCityApiKey}`
+                        },
+                        timeout: 30000
                     }
                 );
                 
-                const status = statusResponse.data.data.status;
-                console.log(`📊 Apify run status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
+                const status = statusResponse.data.status || statusResponse.data.state;
                 
-                if (status === 'SUCCEEDED') {
-                    console.log('✅ Apify run completed successfully');
+                if (status === 'SUCCEEDED' || status === 'succeeded' || status === 'completed') {
+                    console.log('✅ LinkedIn scraping completed!');
                     
-                    // Get results from dataset
-                    const datasetId = statusResponse.data.data.defaultDatasetId;
-                    const resultsResponse = await axios.get(
-                        `https://api.apify.com/v2/datasets/${datasetId}/items`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${this.apifyApiKey}`
-                            }
-                        }
-                    );
-                    
-                    return resultsResponse.data || [];
-                    
-                } else if (status === 'FAILED') {
-                    throw new Error('Apify run failed');
-                } else if (status === 'ABORTED') {
-                    throw new Error('Apify run was aborted');
+                    // Descargar resultados
+                    if (statusResponse.data.outputUrl) {
+                        const csvUrl = statusResponse.data.outputUrl.startsWith('/') 
+                            ? `https://app.scrapercity.com${statusResponse.data.outputUrl}`
+                            : statusResponse.data.outputUrl;
+                        
+                        return await this.downloadAndParseCsv(csvUrl);
+                    }
                 }
                 
+                if (status === 'FAILED' || status === 'failed') {
+                    throw new Error('LinkedIn scraping failed');
+                }
+                
+                console.log(`🔄 LinkedIn status: ${status} (${attempts}/${maxAttempts})`);
+                
             } catch (error) {
-                console.error(`❌ Error checking run status:`, error.message);
-                break;
+                console.error(`⚠️ LinkedIn check attempt ${attempts} failed:`, error.message);
+                
+                if (attempts >= maxAttempts) {
+                    throw error;
+                }
             }
-            
-            attempts++;
         }
         
-        throw new Error('Apify run timeout - exceeded maximum wait time');
+        throw new Error('Timeout waiting for LinkedIn results');
     }
 
-    // Process raw Apollo results into our lead format
-    async processApolloResults(rawResults) {
-        console.log('🔄 Processing Apollo.io results...');
+    // Merge LinkedIn data con los leads originales
+    mergeLinkedInData(originalLeads, linkedInData) {
+        const enrichedLeads = [];
         
-        const processedLeads = [];
-        
-        for (const rawLead of rawResults) {
-            try {
-                // Skip if missing critical data
-                if (!rawLead.email || !rawLead.name) {
-                    console.log('⚠️ Skipping lead with missing email or name');
-                    continue;
-                }
-
-                const lead = {
-                    // Personal information
-                    name: this.formatName(rawLead.name, rawLead.firstName, rawLead.lastName),
-                    email: rawLead.email.toLowerCase().trim(),
-                    title: this.normalizeTitle(rawLead.title || rawLead.jobTitle),
-                    phone: this.formatPhone(rawLead.phone || rawLead.phoneNumber),
-                    linkedin_url: rawLead.linkedinUrl || '',
+        originalLeads.forEach(lead => {
+            // Buscar datos de LinkedIn correspondientes
+            const linkedInProfile = linkedInData.find(profile => {
+                // Matching por URL o nombre
+                return profile.url === lead.linkedin_url || 
+                       profile.fullName === lead.name ||
+                       profile.name === lead.name;
+            });
+            
+            if (linkedInProfile) {
+                // Crear lead enriquecido
+                const enrichedLead = {
+                    ...lead,
+                    is_premium: true, // Marcar como premium
+                    linkedin_enriched: true,
                     
-                    // Company information
-                    company: rawLead.companyName || rawLead.organizationName || 'Unknown Company',
-                    website: rawLead.companyWebsite || '',
-                    location: this.formatLocation(rawLead.location, rawLead.city, rawLead.state, rawLead.country),
-                    industry: rawLead.industry || this.estimateIndustry(rawLead.companyName),
+                    // Datos adicionales de LinkedIn
+                    linkedin_headline: linkedInProfile.headline || linkedInProfile.title,
+                    linkedin_summary: linkedInProfile.summary || linkedInProfile.about,
+                    linkedin_location: linkedInProfile.location,
+                    linkedin_connections: linkedInProfile.connections,
+                    linkedin_followers: linkedInProfile.followers,
                     
-                    // Company metrics
-                    company_size: this.normalizeCompanySize(rawLead.companySize),
-                    employee_count: this.extractEmployeeCount(rawLead.companySize, rawLead.employeeCount),
-                    estimated_revenue: this.estimateRevenue(rawLead),
+                    // Experiencia
+                    current_position_duration: linkedInProfile.currentPositionDuration,
+                    total_experience: linkedInProfile.experience,
+                    previous_companies: linkedInProfile.previousCompanies || [],
                     
-                    // Lead metadata
-                    source: 'apollo_io',
-                    real_email_verified: true, // Apollo provides verified emails
-                    email_sequence_status: 'not_started',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    // Educación
+                    education: linkedInProfile.education || [],
+                    skills: linkedInProfile.skills || [],
+                    languages: linkedInProfile.languages || [],
+                    
+                    // Actividad
+                    linkedin_posts: linkedInProfile.recentPosts || [],
+                    last_active: linkedInProfile.lastActive,
+                    
+                    // Score mejorado por tener datos de LinkedIn
+                    score: Math.min(lead.score + 10, 100),
+                    
+                    enrichment_date: new Date().toISOString()
                 };
-
-                // Calculate enhanced scoring
-                lead.score = this.calculateLeadScore(lead);
-                lead.qualified = lead.score >= 60;
-                lead.target_match = this.isTargetMatch(lead);
-                lead.seniority_level = this.getSeniorityLevel(lead.title);
-
-                // Only include high-quality leads
-                if (lead.score >= 40 && lead.email && lead.name && lead.company) {
-                    processedLeads.push(lead);
-                    
-                    console.log(`✅ Processed: ${lead.name} (${lead.title}) at ${lead.company} - Score: ${lead.score}`);
+                
+                enrichedLeads.push(enrichedLead);
+                console.log(`  ✅ Enriched: ${lead.name} - Added LinkedIn professional data`);
+            } else {
+                // Si no se encontró match, mantener el lead original pero marcado
+                enrichedLeads.push({
+                    ...lead,
+                    is_premium: true,
+                    linkedin_enriched: false
+                });
+                console.log(`  ⚠️ No match found for: ${lead.name}`);
+            }
+        });
+        
+        return enrichedLeads;
+    }
+    
+    // ========== SCRAPERCITY NATIVE INTEGRATION ==========
+    
+    async scrapeWithScraperCity(searchParams = {}) {
+        console.log('🚀 ScraperCity - Using FILTER-BASED endpoint (apollo-filters)...');
+        
+        try {
+            // Usar el endpoint ALTERNATIVO con filtros
+            const scraperPayload = {
+                // Person filters
+                personTitles: searchParams.jobTitle ? [searchParams.jobTitle] : [],
+                personCities: searchParams.location ? [searchParams.location] : [],
+                
+                // Company filters
+                companyIndustry: searchParams.industry || undefined,
+                companySize: searchParams.companySize || undefined,
+                
+                // Control
+                count: Math.min(searchParams.count || 500, this.MAX_CONTACTS),
+                hasPhone: false,
+                fileName: `leads_${Date.now()}`
+            };
+            
+            // Limpiar undefined del payload
+            Object.keys(scraperPayload).forEach(key => 
+                scraperPayload[key] === undefined && delete scraperPayload[key]
+            );
+            
+            console.log('📤 Filter-based payload:', JSON.stringify(scraperPayload, null, 2));
+            
+            // USAR EL ENDPOINT CORRECTO: apollo-filters
+            const response = await axios.post(
+                `${this.scraperCityBaseUrl}/scrape/apollo-filters`,
+                scraperPayload,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.scraperCityApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 120000
                 }
-
+            );
+            
+            console.log('✅ ScraperCity response received');
+            
+            let runId = response.data?.runId || response.data?.id || response.data?.scrapeId;
+            
+            if (runId) {
+                console.log(`⏳ ScraperCity run started: ${runId}`);
+                const results = await this.waitForScraperCityResults(runId);
+                
+                if (results && results.length > 0) {
+                    const processedLeads = this.processScraperCityResults(results);
+                    
+                    if (processedLeads.length > 0) {
+                        await this.sendLeadsToServer(processedLeads);
+                    }
+                    
+                    return {
+                        success: true,
+                        totalLeads: processedLeads.length,
+                        leads: processedLeads,
+                        source: 'scrapercity_filters',
+                        runId: runId,
+                        message: `Extracted ${processedLeads.length} profiles via filter-based endpoint`
+                    };
+                }
+            }
+            
+            throw new Error('No runId received from ScraperCity');
+            
+        } catch (error) {
+            console.error('❌ ScraperCity error:', error.message);
+            if (error.response) {
+                console.error('Response:', error.response.data);
+            }
+            throw error;
+        }
+    }
+    
+    // Esperar resultados de ScraperCity
+    async waitForScraperCityResults(runId, maxAttempts = 60) {
+        let attempts = 0;
+        
+        console.log(`⏳ Waiting for ScraperCity results: ${runId}`);
+        console.log('⚠️ This may take 3-5 minutes for 500 leads');
+        
+        while (attempts < maxAttempts) {
+            attempts++;
+            await this.delay(10000); // 10 segundos entre intentos
+            
+            console.log(`🔄 Attempt ${attempts}/${maxAttempts} - Checking status...`);
+            
+            try {
+                // Verificar estado del scrape
+                const statusResponse = await axios.get(
+                    `${this.scraperCityBaseUrl}/scrape/status/${runId}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${this.scraperCityApiKey}`
+                        },
+                        timeout: 30000
+                    }
+                );
+                
+                const scrapeData = statusResponse.data;
+                const status = scrapeData.status || scrapeData.state || scrapeData.run_status;
+                
+                console.log(`📊 ScraperCity status: ${status}`);
+                
+                if (status === 'SUCCEEDED' || status === 'succeeded' || status === 'completed' || status === 'COMPLETED') {
+                    console.log('✅ ScraperCity completed!');
+                    
+                    await this.delay(5000);
+                    
+                    let csvUrl = null;
+                    
+                    const possibleUrlFields = [
+                        'outputUrl', 'downloadUrl', 'download_url', 
+                        'resultUrl', 'result_url', 'csv_url', 'csvUrl',
+                        'file_url', 'fileUrl', 'output', 'result'
+                    ];
+                    
+                    for (const field of possibleUrlFields) {
+                        if (scrapeData[field]) {
+                            csvUrl = scrapeData[field];
+                            console.log(`Found URL in field '${field}': ${csvUrl}`);
+                            break;
+                        }
+                    }
+                    
+                    if (csvUrl && csvUrl.startsWith('/')) {
+                        csvUrl = `https://app.scrapercity.com${csvUrl}`;
+                    }
+                    
+                    if (csvUrl) {
+                        console.log(`📥 Downloading CSV from: ${csvUrl}`);
+                        return await this.downloadAndParseCsv(csvUrl);
+                    } else {
+                        console.log('⚠️ No CSV URL found in response');
+                        console.log('Full response:', JSON.stringify(scrapeData, null, 2));
+                        throw new Error('No CSV URL found in ScraperCity response');
+                    }
+                }
+                
+                if (status === 'RUNNING' || status === 'running' || status === 'IN_PROGRESS' || status === 'PENDING') {
+                    console.log(`⏳ ScraperCity still processing... (${attempts}/${maxAttempts})`);
+                    
+                    if (scrapeData.progress) {
+                        console.log(`📊 Progress: ${scrapeData.progress}%`);
+                    }
+                    if (scrapeData.rows_extracted) {
+                        console.log(`📊 Rows extracted so far: ${scrapeData.rows_extracted}`);
+                    }
+                }
+                
+                if (status === 'FAILED' || status === 'failed' || status === 'ERROR') {
+                    console.error('❌ ScraperCity failed');
+                    console.error('Failure reason:', scrapeData.error || scrapeData.message || 'Unknown');
+                    throw new Error('ScraperCity run failed');
+                }
+                
             } catch (error) {
-                console.error('❌ Error processing individual lead:', error.message);
-                continue;
+                console.error(`❌ Error in attempt ${attempts}:`, error.message);
+                
+                if (attempts >= maxAttempts) {
+                    throw error;
+                }
+                
+                console.log(`↻ Continuing with next attempt in 10 seconds...`);
             }
         }
-
-        console.log(`🎯 Processed ${processedLeads.length} high-quality leads from ${rawResults.length} raw results`);
         
-        // Sort by score (highest first)
-        processedLeads.sort((a, b) => b.score - a.score);
+        throw new Error('Timeout waiting for ScraperCity results');
+    }
+    
+    // Descargar y parsear CSV
+    async downloadAndParseCsv(csvUrl) {
+        console.log(`📥 Downloading CSV...`);
+        
+        let csvContent = null;
+        let downloadAttempts = 0;
+        const maxDownloadAttempts = 3;
+        
+        while (downloadAttempts < maxDownloadAttempts && !csvContent) {
+            downloadAttempts++;
+            try {
+                console.log(`📦 Download attempt ${downloadAttempts}/${maxDownloadAttempts}...`);
+                
+                const csvResponse = await axios.get(csvUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${this.scraperCityApiKey}`,
+                        'Accept': 'text/csv, application/csv, text/plain, */*'
+                    },
+                    maxRedirects: 5,
+                    responseType: 'text',
+                    timeout: 60000,
+                    maxContentLength: Infinity,
+                    maxBodyLength: Infinity
+                });
+                
+                csvContent = csvResponse.data;
+                
+                if (csvContent && csvContent.length > 0) {
+                    console.log('✅ CSV downloaded successfully!');
+                    console.log(`📊 CSV size: ${csvContent.length} characters`);
+                    
+                    const firstLines = csvContent.split('\n').slice(0, 3).join('\n');
+                    console.log('First lines of CSV:', firstLines);
+                }
+                
+            } catch (downloadError) {
+                console.error(`⚠️ Download error attempt ${downloadAttempts}:`, downloadError.message);
+                if (downloadAttempts < maxDownloadAttempts) {
+                    console.log('↻ Retrying download in 3 seconds...');
+                    await this.delay(3000);
+                }
+            }
+        }
+        
+        if (csvContent && csvContent.length > 0) {
+            console.log('📄 Parsing CSV...');
+            
+            const parsed = Papa.parse(csvContent, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+                delimiter: ',',
+                transformHeader: (header) => header.trim()
+            });
+            
+            console.log(`📊 Parsed ${parsed.data.length} rows from CSV`);
+            
+            if (parsed.data.length > 0) {
+                console.log('CSV Headers:', Object.keys(parsed.data[0]));
+                console.log('Sample lead:', JSON.stringify(parsed.data[0], null, 2));
+            }
+            
+            return parsed.data;
+        } else {
+            throw new Error('CSV content is empty');
+        }
+    }
+    
+    // Procesar resultados de ScraperCity - ACTUALIZADO para manejar el nuevo formato
+    processScraperCityResults(rawResults) {
+        console.log(`🔄 Processing ${rawResults.length} ScraperCity results...`);
+        
+        const processedLeads = [];
+        let skippedNoEmail = 0;
+        
+        for (const row of rawResults) {
+            // Mapeo actualizado para el formato nuevo de ScraperCity
+            const lead = {
+                // Información básica
+                name: row.fullName || row.full_name || row.name || row.Name || 
+                      `${row.firstName || ''} ${row.lastName || ''}`.trim() || '',
+                      
+                email: (row.email || row.Email || '').toLowerCase().trim(),
+                       
+                title: row.position || row.title || row.Title || '',
+                       
+                company: row.orgName || row.company_name || row.company || row.Company || '',
+                
+                // Contacto adicional
+                phone: row.phone || row.phoneRaw || row.Phone || '',
+                       
+                linkedin_url: row.linkedinUrl || row.linkedin || row.LinkedIn || '',
+                
+                // Ubicación
+                location: `${row.city || ''} ${row.state || ''}`.trim() || row.location || '',
+                city: row.city || row.City || '',
+                state: row.state || row.State || '',
+                country: row.country || row.Country || '',
+                
+                // Empresa
+                website: row.orgWebsite || row.company_website || row.website || '',
+                        
+                industry: row.orgIndustry || row.industry || '',
+                         
+                company_size: row.orgSize || row.company_size || '',
+                             
+                employee_count: parseInt(row.orgSize || row.employees || 0),
+                
+                // Datos adicionales de ScraperCity
+                seniority: row.seniority || '',
+                email_status: row.emailStatus || '',
+                company_description: row.orgDescription || '',
+                company_specialities: row.orgSpecialities || '',
+                
+                // Metadata
+                source: 'scrapercity_direct',
+                scraping_method: 'scrapercity_native',
+                scraping_date: new Date().toISOString(),
+                real_email_verified: row.emailStatus === 'Verified',
+                email_sequence_status: 'not_started'
+            };
+            
+            // Limpiar campos de arrays que vienen como strings
+            if (typeof lead.industry === 'string' && lead.industry.startsWith('[')) {
+                try {
+                    lead.industry = JSON.parse(lead.industry.replace(/'/g, '"')).join(', ');
+                } catch (e) {
+                    lead.industry = lead.industry.replace(/[\[\]']/g, '');
+                }
+            }
+            
+            // Validación - solo requerir email
+            if (lead.email && lead.email.includes('@')) {
+                if (!lead.name) {
+                    lead.name = lead.email.split('@')[0].replace(/[._-]/g, ' ');
+                }
+                
+                lead.score = this.calculateRealDataScore(lead);
+                lead.qualified = lead.score >= 60;
+                lead.seniority_level = lead.seniority || this.getSeniorityLevel(lead.title);
+                lead.target_match = this.isRealTargetMatch(lead);
+                
+                processedLeads.push(lead);
+            } else {
+                skippedNoEmail++;
+            }
+        }
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`✅ PROCESSING COMPLETED:`);
+        console.log(`📊 Total in CSV: ${rawResults.length} rows`);
+        console.log(`✅ Valid leads processed: ${processedLeads.length}`);
+        console.log(`❌ Skipped without email: ${skippedNoEmail}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         return processedLeads;
     }
-
-    // Enhanced lead scoring for SalesHandy
-    calculateLeadScore(lead) {
+    
+    // ========== HELPER FUNCTIONS ==========
+    
+    calculateRealDataScore(lead) {
         let score = 0;
         
-        // Base data quality (40 points max)
+        // Calidad de datos básicos (40 puntos max)
         if (lead.name && lead.name.length > 2) score += 10;
         if (lead.email && this.isValidEmail(lead.email)) score += 15;
         if (lead.company && lead.company.length > 2) score += 10;
         if (lead.phone && lead.phone.length > 5) score += 5;
         
-        // Title/seniority scoring (30 points max)
+        // Información profesional (30 puntos max)
         if (lead.title) {
             const title = lead.title.toLowerCase();
             if (title.includes('ceo') || title.includes('owner') || title.includes('founder') || title.includes('president')) {
@@ -332,14 +709,15 @@ class ApolloLeadScraper {
             }
         }
         
-        // Industry bonus (15 points max)
-        if (lead.industry && this.priorityIndustries.includes(lead.industry)) {
+        // Bonificación por industria (15 puntos max)
+        if (lead.industry && this.priorityIndustries.some(ind => 
+            lead.industry.toLowerCase().includes(ind.toLowerCase()))) {
             score += 15;
         } else if (lead.industry) {
             score += 5;
         }
         
-        // Company size bonus (10 points max)
+        // Bonificación por tamaño de empresa (10 puntos max)
         if (lead.employee_count) {
             if (lead.employee_count >= 11 && lead.employee_count <= 200) {
                 score += 10;
@@ -350,163 +728,16 @@ class ApolloLeadScraper {
             }
         }
         
-        // Revenue bonus (5 points max)
-        if (lead.estimated_revenue >= 200000) {
-            score += 5;
-        } else if (lead.estimated_revenue >= 100000) {
-            score += 3;
-        }
+        // Bonificación por datos adicionales (5 puntos max)
+        if (lead.linkedin_url) score += 2;
+        if (lead.website) score += 2;
+        
+        // Bonificación por email verificado
+        if (lead.email_status === 'Verified') score += 5;
         
         return Math.min(score, 100);
     }
-
-    // Helper methods
-    isValidEmail(email) {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email) && 
-               !email.includes('info@') && 
-               !email.includes('contact@') && 
-               !email.includes('admin@') &&
-               !email.includes('support@');
-    }
-
-    formatName(fullName, firstName, lastName) {
-        if (fullName && fullName.trim()) return fullName.trim();
-        if (firstName && lastName) return `${firstName.trim()} ${lastName.trim()}`;
-        if (firstName) return firstName.trim();
-        return 'Unknown Contact';
-    }
-
-    normalizeTitle(title) {
-        if (!title) return 'Business Contact';
-        
-        // Clean up common title variations
-        const titleMappings = {
-            'chief executive officer': 'CEO',
-            'chief operating officer': 'COO', 
-            'chief financial officer': 'CFO',
-            'chief technology officer': 'CTO',
-            'vice president': 'VP',
-            'managing director': 'Managing Director'
-        };
-        
-        const lowerTitle = title.toLowerCase();
-        for (const [key, value] of Object.entries(titleMappings)) {
-            if (lowerTitle.includes(key)) {
-                return value;
-            }
-        }
-        
-        // Capitalize properly
-        return title.split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
-    }
-
-    formatPhone(phone) {
-        if (!phone) return '';
-        return phone.replace(/[^\d+]/g, '').replace(/(\d{3})(\d{3})(\d{4})/, '+1-$1-$2-$3');
-    }
-
-    formatLocation(location, city, state, country) {
-        if (location) return location;
-        if (city && state) return `${city}, ${state}`;
-        if (city) return city;
-        return 'Location Unknown';
-    }
-
-    normalizeCompanySize(companySize) {
-        if (!companySize) return 'Medium';
-        
-        const size = companySize.toLowerCase();
-        if (size.includes('1-10') || size.includes('micro')) return 'Small';
-        if (size.includes('11-50') || size.includes('small')) return 'Medium';
-        if (size.includes('51-200') || size.includes('medium')) return 'Medium';
-        if (size.includes('201-500') || size.includes('large')) return 'Large';
-        if (size.includes('500+') || size.includes('enterprise')) return 'Enterprise';
-        
-        return 'Medium';
-    }
-
-    extractEmployeeCount(companySize, employeeCount) {
-        if (employeeCount && typeof employeeCount === 'number') return employeeCount;
-        
-        if (companySize) {
-            const size = companySize.toLowerCase();
-            if (size.includes('1-10')) return 5;
-            if (size.includes('11-50')) return 25;
-            if (size.includes('51-200')) return 100;
-            if (size.includes('201-500')) return 300;
-            if (size.includes('500+')) return 750;
-        }
-        
-        return 50; // Default estimate
-    }
-
-    estimateRevenue(lead) {
-        let baseRevenue = 150000;
-        
-        // Industry multipliers
-        const industryMultipliers = {
-            'Technology': 2.2,
-            'Financial Services': 2.5,
-            'Healthcare': 1.8,
-            'Manufacturing': 1.6,
-            'Construction': 1.4,
-            'Legal Services': 2.0,
-            'Consulting': 1.9
-        };
-        
-        if (lead.industry && industryMultipliers[lead.industry]) {
-            baseRevenue *= industryMultipliers[lead.industry];
-        } else {
-            baseRevenue *= 1.3;
-        }
-        
-        // Company size multiplier
-        if (lead.employee_count) {
-            if (lead.employee_count > 200) baseRevenue *= 2.0;
-            else if (lead.employee_count > 50) baseRevenue *= 1.5;
-            else if (lead.employee_count > 20) baseRevenue *= 1.2;
-        }
-        
-        return Math.round(baseRevenue);
-    }
-
-    estimateIndustry(companyName) {
-        if (!companyName) return 'Business Services';
-        
-        const name = companyName.toLowerCase();
-        if (name.includes('tech') || name.includes('software')) return 'Technology';
-        if (name.includes('health') || name.includes('medical')) return 'Healthcare';
-        if (name.includes('build') || name.includes('construction')) return 'Construction';
-        if (name.includes('legal') || name.includes('law')) return 'Legal Services';
-        if (name.includes('consult')) return 'Consulting';
-        
-        return 'Business Services';
-    }
-
-    isTargetMatch(lead) {
-        let score = 0;
-        
-        // Priority industry
-        if (lead.industry && this.priorityIndustries.includes(lead.industry)) score++;
-        
-        // Target title
-        if (lead.title) {
-            const titleLower = lead.title.toLowerCase();
-            if (this.targetTitles.some(title => titleLower.includes(title.toLowerCase()))) score++;
-        }
-        
-        // Company size
-        if (lead.employee_count >= 11 && lead.employee_count <= 500) score++;
-        
-        // Valid email
-        if (this.isValidEmail(lead.email)) score++;
-        
-        return score >= 3; // Match at least 3 out of 4 criteria
-    }
-
+    
     getSeniorityLevel(title) {
         if (!title) return 'Staff';
         
@@ -521,124 +752,136 @@ class ApolloLeadScraper {
         if (titleLower.includes('director')) {
             return 'Director';
         }
-        if (titleLower.includes('manager')) {
+        if (titleLower.includes('manager') || titleLower.includes('head of')) {
             return 'Manager';
         }
         
         return 'Staff';
     }
-
-    // Fallback test data generation
-    generateFallbackLeads(count = 25) {
-        console.log(`🧪 Generating ${count} fallback test leads...`);
+    
+    isRealTargetMatch(lead) {
+        let matches = 0;
         
-        const testLeads = [];
-        const companies = ['TechCorp Inc', 'BuildRight LLC', 'HealthSystems Pro', 'ManufacturingPlus', 'LegalAdvice Co'];
-        const names = ['John Smith', 'Sarah Johnson', 'Mike Davis', 'Lisa Wilson', 'David Brown', 'Emma Garcia', 'James Miller'];
-        const locations = ['Miami, FL', 'Dallas, TX', 'Atlanta, GA', 'Phoenix, AZ', 'Denver, CO'];
+        // Industria objetivo
+        if (lead.industry && this.priorityIndustries.some(ind => 
+            lead.industry.toLowerCase().includes(ind.toLowerCase()))) matches++;
         
-        for (let i = 0; i < count; i++) {
-            const company = companies[i % companies.length];
-            const name = names[i % names.length];
-            const location = locations[i % locations.length];
-            const industry = this.priorityIndustries[i % this.priorityIndustries.length];
-            const title = this.targetTitles[i % this.targetTitles.length];
-            
-            const lead = {
-                name: `${name} ${i + 1}`,
-                email: `${name.toLowerCase().replace(' ', '.')}${i + 1}@${company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-                title: title,
-                company: `${company} ${i + 1}`,
-                phone: `+1-555-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-                website: `https://${company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-                linkedin_url: `https://linkedin.com/in/${name.toLowerCase().replace(' ', '-')}-${i + 1}`,
-                location: location,
-                industry: industry,
-                company_size: ['Small', 'Medium', 'Large'][i % 3],
-                employee_count: [25, 75, 150][i % 3],
-                estimated_revenue: 150000 + (i * 50000),
-                source: 'test_apollo_fallback',
-                real_email_verified: true,
-                email_sequence_status: 'not_started'
-            };
-            
-            lead.score = this.calculateLeadScore(lead);
-            lead.qualified = lead.score >= 60;
-            lead.target_match = this.isTargetMatch(lead);
-            lead.seniority_level = this.getSeniorityLevel(lead.title);
-            
-            testLeads.push(lead);
-        }
+        // Título objetivo
+        if (lead.title && this.targetTitles.some(title => 
+            lead.title.toLowerCase().includes(title.toLowerCase()))) matches++;
         
-        console.log(`✅ Generated ${testLeads.length} test leads`);
-        return {
-            success: true,
-            totalLeads: testLeads.length,
-            leads: testLeads,
-            source: 'test_data'
-        };
+        // Tamaño de empresa
+        if (lead.employee_count >= 11 && lead.employee_count <= 500) matches++;
+        
+        // Email válido
+        if (this.isValidEmail(lead.email)) matches++;
+        
+        return matches >= 3;
     }
-
-    // Send leads to server
+    
+    isValidEmail(email) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email) && 
+               !email.includes('info@') && 
+               !email.includes('contact@') && 
+               !email.includes('admin@') &&
+               !email.includes('support@');
+    }
+    
+    // Enviar leads al servidor en lotes - ACTUALIZADO para marcar los premium
     async sendLeadsToServer(leads) {
         try {
             console.log(`📤 Sending ${leads.length} leads to server...`);
             
-            const response = await axios.post(`${this.serverUrl}/api/batch-add-leads`, {
-                leads: leads
-            });
+            // Contar leads premium
+            const premiumCount = leads.filter(l => l.is_premium).length;
+            if (premiumCount > 0) {
+                console.log(`⭐ Including ${premiumCount} PREMIUM leads with LinkedIn enrichment`);
+            }
             
-            console.log('✅ Server response:', response.data);
-            return response.data;
+            const batchSize = 50;
+            let totalProcessed = 0;
+            
+            for (let i = 0; i < leads.length; i += batchSize) {
+                const batch = leads.slice(i, i + batchSize);
+                
+                console.log(`📦 Processing batch ${Math.floor(i/batchSize) + 1} - ${batch.length} leads`);
+                
+                await axios.post(`${this.serverUrl}/api/batch-add-leads`, {
+                    leads: batch
+                }, {
+                    timeout: 30000
+                });
+                
+                totalProcessed += batch.length;
+                console.log(`✅ ${totalProcessed}/${leads.length} leads processed`);
+                
+                if (i + batchSize < leads.length) {
+                    await this.delay(1000);
+                }
+            }
+            
+            console.log(`✅ ALL ${leads.length} leads sent to server`);
+            return { success: true, totalProcessed: leads.length };
             
         } catch (error) {
-            console.error('❌ Error sending leads to server:', error.message);
+            console.error('❌ Error sending leads:', error.message);
             return { success: false, error: error.message };
         }
     }
-
-    // Utility functions
+    
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+    
+    // Función de compatibilidad para búsqueda por email
+    async searchPersonByEmail(email) {
+        try {
+            console.log(`🔍 Email search not available in direct mode`);
+            
+            return {
+                success: false,
+                data: {
+                    email_status: 'not_available',
+                    message: 'Direct ScraperCity mode - email verification not available'
+                }
+            };
+            
+        } catch (error) {
+            console.error('❌ Error:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
 }
 
-// Execute if run directly
+// Exportar con el nombre original para compatibilidad
+module.exports = ScraperCityDirectScraper;
+
+// Si se ejecuta directamente
 if (require.main === module) {
-    const scraper = new ApolloLeadScraper();
+    const scraper = new ScraperCityDirectScraper();
     
-    // Example search parameters
     const searchParams = {
         jobTitle: 'CEO',
-        industry: 'Technology', 
-        location: 'United States',
-        companySize: '11-200',
-        count: 50
+        location: 'Miami',
+        count: 500
     };
     
-    console.log('🚀 Starting Apollo.io scraper for SalesHandy integration...');
+    console.log('🚀 Testing ScraperCity Direct with LinkedIn Enrichment...');
+    console.log('💰 Estimated cost: $1.95 (Apollo) + $0.20 (LinkedIn TOP 10) = $2.15 total');
     
     scraper.scrapeLeadsFromApollo(searchParams)
         .then(results => {
-            console.log('\n🎉 === SCRAPING COMPLETE ===');
-            console.log(`✅ Success: ${results.success}`);
+            console.log('\n✅ Test complete!');
             console.log(`📊 Total leads: ${results.totalLeads}`);
-            console.log(`🎯 Source: ${results.source}`);
-            
-            if (results.leads && results.leads.length > 0) {
-                console.log('\n📋 Sample leads:');
-                results.leads.slice(0, 3).forEach((lead, i) => {
-                    console.log(`${i + 1}. ${lead.name} - ${lead.title} at ${lead.company}`);
-                    console.log(`   📧 ${lead.email} | Score: ${lead.score} | Industry: ${lead.industry}`);
-                });
-            }
-            
+            console.log(`⭐ Premium enriched: ${results.enrichedLeadsCount || 0}`);
             process.exit(0);
         })
         .catch(error => {
-            console.error('❌ Scraping failed:', error);
+            console.error('❌ Test failed:', error);
             process.exit(1);
         });
 }
-
-module.exports = ApolloLeadScraper;
