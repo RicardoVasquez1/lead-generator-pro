@@ -40,5 +40,8 @@
         "dashboard"
     ],
     "author": "Ricardo",
-    "license": "MIT"
+    "license": "MIT",
+    "puppeteer": {
+        "skipDownload": true
+    }
 }
