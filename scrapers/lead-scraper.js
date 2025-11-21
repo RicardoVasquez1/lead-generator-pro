@@ -14,7 +14,7 @@ class PriorityLeadScraper {
             'Administrative and office support',
             'Legal industry', 
             'Retail',
-            'Construction',
+            'construction',
             'Manufacturing',
             'Utilities/Energy',
             'Car dealerships',
@@ -24,7 +24,7 @@ class PriorityLeadScraper {
         
         // Search terms optimized for high-revenue companies
         this.industrySearchTerms = {
-            'Construction': ['construction company owner', 'general contractor CEO', 'construction firm president'],
+            'construction': ['construction company owner', 'general contractor CEO', 'construction firm president'],
             'Legal industry': ['law firm partner', 'attorney owner', 'legal practice president'],
             'Manufacturing': ['manufacturing CEO', 'factory owner', 'industrial company president'],
             'Retail': ['retail chain owner', 'store owner CEO', 'retail company president'],
@@ -294,15 +294,15 @@ class PriorityLeadScraper {
         
         // Industry-based revenue adjustments
         const industryMultipliers = {
-            'Construction': 1.5,
-            'Manufacturing': 2.0,
-            'Legal industry': 1.8,
-            'Commercial real estate': 2.2,
-            'Utilities/Energy': 3.0,
-            'Car dealerships': 1.7,
-            'Wholesaling': 1.6,
-            'Retail': 1.2,
-            'Administrative and office support': 1.0
+            'construction': 1.5,
+            'manufacturing': 2.0,
+            'legal industry': 1.8,
+            'commercial real estate': 2.2,
+            'utilities/Energy': 3.0,
+            'car dealerships': 1.7,
+            'wholesaling': 1.6,
+            'retail': 1.2,
+            'administrative and office support': 1.0
         };
         
         baseRevenue *= (industryMultipliers[industry] || 1.0);
@@ -351,11 +351,11 @@ class PriorityLeadScraper {
         
         // Industry adjustment
         const industryMultipliers = {
-            'Construction': 1.4,
-            'Manufacturing': 1.8,
-            'Car dealerships': 1.6,
-            'Commercial real estate': 2.0,
-            'Legal industry': 1.5
+            'construction': 1.4,
+            'manufacturing': 1.8,
+            'car dealerships': 1.6,
+            'commercial real estate': 2.0,
+            'legal industry': 1.5
         };
         
         baseRevenue *= (industryMultipliers[industry] || 1.0);

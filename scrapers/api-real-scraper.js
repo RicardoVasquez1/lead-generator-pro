@@ -17,7 +17,7 @@ class ScraperCityDirectScraper {
         this.TOP_LEADS_FOR_LINKEDIN = 10;
         
         this.priorityIndustries = [
-            'Manufacturing', 'Construction', 'Logistics & Supply Chain', 'Industrial Services', 'Waste Management',
+            'Manufacturing', 'construction', 'Logistics & Supply Chain', 'Industrial Services', 'Waste Management',
             'HVAC', 'Electrical Services', 'Plumbing', 'Facility Maintenance', 'Auto Repair', 'Fleet Services',
             'Accounting & Bookkeeping', 'Legal Services', 'Insurance Agencies', 'Management Consulting', 
             'HR & Staffing Firms', 'Compliance Services', 'Pest Control', 'Landscaping', 
@@ -28,7 +28,7 @@ class ScraperCityDirectScraper {
             'Online Training Providers', 'Corporate Training Companies', 'Driving Schools', 
             'Private K-12 Institutions', 'Print Services', 'Office Equipment Suppliers', 
             'Safety Equipment Providers', 'Commercial Furniture', 'Signage & Displays',
-            'Commercial Property Management', 'Real Estate Investment Groups', 'Construction Project Management',
+            'Commercial Property Management', 'Real Estate Investment Groups', 'construction Project Management',
             'Architectural Services', 'Building Inspection Services', 'Outsourced Customer Support',
             'Technical Support Providers', 'BPO Firms'
         ];
@@ -44,6 +44,10 @@ class ScraperCityDirectScraper {
             'Admin Manager', 'Finance Manager', 'IT Manager', 'Facilities Manager',
             'Head of Finance', 'Head of Operations'
         ];
+        
+        // 🔴 NUEVO - Variables para tracking
+        this.currentRunId = null;
+        this.currentSearchQuery = null;
     }
 
     // ========== FUNCIÓN PRINCIPAL ==========
@@ -354,6 +358,13 @@ class ScraperCityDirectScraper {
     async scrapeWithScraperCity(searchParams = {}) {
         console.log('🚀 ScraperCity - Using FILTER-BASED endpoint (apollo-filters)...');
         
+        // 🔴 NUEVO - Generar runId y searchQuery AQUÍ, al principio
+        this.currentRunId = `scraperC_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.currentSearchQuery = `${searchParams.jobTitle || ''} ${searchParams.industry || ''} ${searchParams.location || ''}`.trim() || 'Unknown search';
+        
+        console.log(`📦 Batch RunID: ${this.currentRunId}`);
+        console.log(`🔍 Search Query: ${this.currentSearchQuery}`);
+        
         try {
             // Usar el endpoint ALTERNATIVO con filtros
             const scraperPayload = {
@@ -400,7 +411,7 @@ class ScraperCityDirectScraper {
                 const results = await this.waitForScraperCityResults(runId);
                 
                 if (results && results.length > 0) {
-                    const processedLeads = this.processScraperCityResults(results);
+                    const processedLeads = this.processScraperCityResults(results, searchParams);
                     
                     if (processedLeads.length > 0) {
                         await this.sendLeadsToServer(processedLeads);
@@ -411,7 +422,8 @@ class ScraperCityDirectScraper {
                         totalLeads: processedLeads.length,
                         leads: processedLeads,
                         source: 'scrapercity_filters',
-                        runId: runId,
+                        runId: this.currentRunId,  // 🔴 NUEVO
+                        searchQuery: this.currentSearchQuery,  // 🔴 NUEVO
                         message: `Extracted ${processedLeads.length} profiles via filter-based endpoint`
                     };
                 }
@@ -593,8 +605,10 @@ class ScraperCityDirectScraper {
     }
     
     // Procesar resultados de ScraperCity - ACTUALIZADO para manejar el nuevo formato
-    processScraperCityResults(rawResults) {
+    processScraperCityResults(rawResults, searchParams = {}) {
         console.log(`🔄 Processing ${rawResults.length} ScraperCity results...`);
+        console.log(`📦 Using RunID: ${this.currentRunId}`);  // 🔴 NUEVO
+        console.log(`🔍 Search Query: ${this.currentSearchQuery}`);  // 🔴 NUEVO
         
         const processedLeads = [];
         let skippedNoEmail = 0;
@@ -638,6 +652,10 @@ class ScraperCityDirectScraper {
                 company_description: row.orgDescription || '',
                 company_specialities: row.orgSpecialities || '',
                 
+                // 🔴 NUEVO - Agregar runId y searchQuery a cada lead
+                scraper_run_id: this.currentRunId,
+                scraper_search_query: this.currentSearchQuery,
+                
                 // Metadata
                 source: 'scrapercity_direct',
                 scraping_method: 'scrapercity_native',
@@ -647,12 +665,29 @@ class ScraperCityDirectScraper {
             };
             
             // Limpiar campos de arrays que vienen como strings
-            if (typeof lead.industry === 'string' && lead.industry.startsWith('[')) {
-                try {
-                    lead.industry = JSON.parse(lead.industry.replace(/'/g, '"')).join(', ');
-                } catch (e) {
-                    lead.industry = lead.industry.replace(/[\[\]']/g, '');
+            if (typeof lead.industry === 'string') {
+                if (lead.industry.startsWith('[')) {
+                    try {
+                        // Convertir comillas simples a dobles para JSON válido
+                        const cleanString = lead.industry.replace(/'/g, '"');
+                        const parsed = JSON.parse(cleanString);
+                        lead.industry = Array.isArray(parsed) ? parsed.join(', ') : parsed;
+                    } catch (e) {
+                        // Si falla el parse, limpiar manualmente
+                        lead.industry = lead.industry.replace(/[\[\]']/g, '').trim();
+                    }
                 }
+                // Limpiar espacios y capitalizar
+                lead.industry = lead.industry.trim();
+                if (lead.industry) {
+                    // Capitalizar primera letra si es necesario
+                    lead.industry = lead.industry.charAt(0).toUpperCase() + lead.industry.slice(1);
+                }
+            }
+
+            // Si después de todo esto está vacío, usar el parámetro de búsqueda
+            if (!lead.industry && searchParams && searchParams.industry) {
+                lead.industry = searchParams.industry;
             }
             
             // Validación - solo requerir email
@@ -677,6 +712,7 @@ class ScraperCityDirectScraper {
         console.log(`📊 Total in CSV: ${rawResults.length} rows`);
         console.log(`✅ Valid leads processed: ${processedLeads.length}`);
         console.log(`❌ Skipped without email: ${skippedNoEmail}`);
+        console.log(`📦 All leads tagged with RunID: ${this.currentRunId}`);  // 🔴 NUEVO
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         return processedLeads;
@@ -788,10 +824,11 @@ class ScraperCityDirectScraper {
                !email.includes('support@');
     }
     
-    // Enviar leads al servidor en lotes - ACTUALIZADO para marcar los premium
+    // Enviar leads al servidor en lotes - ACTUALIZADO para incluir runId
     async sendLeadsToServer(leads) {
         try {
             console.log(`📤 Sending ${leads.length} leads to server...`);
+            console.log(`📦 All leads include RunID: ${this.currentRunId}`);  // 🔴 NUEVO
             
             // Contar leads premium
             const premiumCount = leads.filter(l => l.is_premium).length;
@@ -821,7 +858,7 @@ class ScraperCityDirectScraper {
                 }
             }
             
-            console.log(`✅ ALL ${leads.length} leads sent to server`);
+            console.log(`✅ ALL ${leads.length} leads sent to server with RunID: ${this.currentRunId}`);
             return { success: true, totalProcessed: leads.length };
             
         } catch (error) {
@@ -877,6 +914,8 @@ if (require.main === module) {
         .then(results => {
             console.log('\n✅ Test complete!');
             console.log(`📊 Total leads: ${results.totalLeads}`);
+            console.log(`📦 RunID: ${results.runId}`);  // 🔴 NUEVO
+            console.log(`🔍 Search: ${results.searchQuery}`);  // 🔴 NUEVO
             console.log(`⭐ Premium enriched: ${results.enrichedLeadsCount || 0}`);
             process.exit(0);
         })

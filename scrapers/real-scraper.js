@@ -9,7 +9,7 @@ class RealLeadScraper {
         
         // Priority industries from Tribearium requirements
         this.priorityIndustries = [
-            'Construction',
+            'construction',
             'Legal industry', 
             'Manufacturing',
             'Car dealerships',
@@ -341,7 +341,7 @@ class RealLeadScraper {
         
         // Industry multipliers
         const multipliers = {
-            'Construction': 1.4, 'Legal industry': 1.8, 'Manufacturing': 2.0,
+            'construction': 1.4, 'Legal industry': 1.8, 'Manufacturing': 2.0,
             'Car dealerships': 1.7, 'Commercial real estate': 2.2,
             'Utilities/Energy': 2.8, 'Wholesaling': 1.5
         };
@@ -370,7 +370,7 @@ class RealLeadScraper {
         
         const multipliers = {
             'Car dealerships': 1.6, 'Commercial real estate': 2.0,
-            'Construction': 1.3, 'Manufacturing': 1.7
+            'construction': 1.3, 'Manufacturing': 1.7
         };
         
         return Math.round(baseRevenue * (multipliers[industry] || 1.2));
@@ -406,7 +406,7 @@ class RealLeadScraper {
 
     getRandomTitle(industry) {
         const titles = {
-            'Construction': ['CEO', 'President', 'Owner', 'General Manager'],
+            'construction': ['CEO', 'President', 'Owner', 'General Manager'],
             'Legal industry': ['Partner', 'Managing Partner', 'Attorney'],
             'Manufacturing': ['CEO', 'President', 'Plant Manager'],
             'Car dealerships': ['General Manager', 'Owner', 'Sales Director'],
@@ -466,7 +466,7 @@ if (require.main === module) {
     const scraper = new RealLeadScraper();
     
     // Only test with 2 industries for initial validation
-    scraper.priorityIndustries = ['Construction', 'Legal industry'];
+    scraper.priorityIndustries = ['construction', 'Legal industry'];
     
     scraper.runFullScraping(1) // 1 lead per industry = 2 total for testing
         .then(results => {

@@ -7,6 +7,17 @@
   <title>Tribearium Lead Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+
+    <script>
+        // Check authentication
+        (function() {
+            const isAuthenticated = localStorage.getItem('isAuthenticated');
+            if (!isAuthenticated || isAuthenticated !== 'true') {
+                window.location.href = 'login.html';
+            }
+        })();
+    </script>
+
   <script>
     tailwind.config = {
       theme: {
@@ -87,7 +98,8 @@
           </a>
           <a href="#" onclick="showSection('leadfinder')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
             <i class="fas fa-search mr-3"></i>Lead Finder
-          </a>
+            <span id="leadfinderBadge" style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:10px; padding:2px 6px; border-radius:9999px;">●</span>
+        </a>
           <a href="#" onclick="showSection('prospects')" class="sidebar-item flex items-center px-3 py-2 rounded-lg text-sm font-medium">
             <i class="fas fa-users mr-3"></i>Prospects
           </a>
@@ -162,6 +174,22 @@
               </div>
           </div>
       </div>
+
+      <!-- ScraperCity Widget -->
+<div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">
+  <div class="flex items-center justify-between">
+      <div>
+          <p class="text-purple-100 text-sm font-medium">ScraperCity Costs</p>
+          <p class="text-3xl font-bold mt-2">$<span id="scraperCityTotal">0.00</span></p>
+          <div class="flex items-center mt-2 space-x-3">
+              <span class="text-xs">$0.0039/lead | <span id="totalLeadsScraped">0</span> leads</span>
+          </div>
+      </div>
+      <div class="bg-white bg-opacity-20 rounded-full p-3">
+          <i class="fas fa-coins text-2xl"></i>
+      </div>
+  </div>
+</div>
 
       <!-- Conversion Rate -->
       <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-white">
@@ -367,6 +395,52 @@
           </div>
       </div>
   </div>
+
+
+  <!-- ScraperCity Detailed Panel -->
+<div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+  <h2 class="text-lg font-bold text-gray-900 mb-4">
+      <i class="fas fa-coins text-purple-600 mr-2"></i>
+      ScraperCity Usage & Costs
+  </h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-purple-50 rounded-lg p-4">
+          <p class="text-purple-600 text-xs font-medium">TODAY</p>
+          <p class="text-2xl font-bold">$<span id="todaySpend">0.00</span></p>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-4">
+          <p class="text-blue-600 text-xs font-medium">THIS WEEK</p>
+          <p class="text-2xl font-bold">$<span id="weekSpend">0.00</span></p>
+      </div>
+      <div class="bg-green-50 rounded-lg p-4">
+          <p class="text-green-600 text-xs font-medium">THIS MONTH</p>
+          <p class="text-2xl font-bold">$<span id="monthSpend">0.00</span></p>
+      </div>
+      <div class="bg-amber-50 rounded-lg p-4">
+          <p class="text-amber-600 text-xs font-medium">AVG PER RUN</p>
+          <p class="text-2xl font-bold">$<span id="avgPerRun">0.00</span></p>
+      </div>
+  </div>
+
+  <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+          <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Query</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Leads</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Cost</th>
+          </tr>
+      </thead>
+      <tbody id="scraperCityRecentTable" class="bg-white divide-y divide-gray-200">
+          <tr><td colspan="4" class="text-center py-4">Loading...</td></tr>
+      </tbody>
+  </table>
+
+  <div class="mt-6">
+      <canvas id="scraperCityCostChart"></canvas>
+  </div>
+</div>
 
   <!-- Cuarta fila - Gráficos principales -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -1781,49 +1855,58 @@
 <!-- LEADFINDER SECTION ACTUALIZADO CON SCRAPERCITY REAL -->
 <!-- LEADFINDER SECTION COMPLETO -->
 <div id="leadfinder-section" class="content-fade p-6">
-  <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Lead Finder</h2>
-      <div class="flex items-center space-x-6 mt-4">
-          <button class="text-purple-600 border-b-2 border-purple-600 pb-1 text-sm font-medium">People</button>
-          <button class="text-gray-600 pb-1 text-sm font-medium">Saved</button>
+  <div class="mb-8">
+      <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Lead Finder</h2>
+      <div class="flex items-center space-x-8 mt-6 border-b border-gray-200">
+          <button class="text-purple-600 border-b-2 border-purple-600 pb-3 text-sm font-semibold transition-all">People</button>
+          <button class="text-gray-500 pb-3 text-sm font-medium hover:text-gray-700 transition-colors">Saved</button>
       </div>
   </div>
 
-  <div class="bg-white rounded-lg border border-gray-200">
+  <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
       <div class="flex">
-          <!-- Filters Sidebar - EXACTAMENTE como Apollo -->
-          <div class="w-80 border-r border-gray-200 p-6">
+          <!-- Filters Sidebar - MEJORADO -->
+          <div class="w-80 border-r border-gray-100 bg-gradient-to-b from-gray-50 to-white p-6">
               <div class="space-y-4">
                   <!-- AI Search -->
-                  <div class="border border-gray-200 rounded-lg p-3">
-                      <h4 class="font-medium mb-3">
-                          <i class="fas fa-magic mr-2 text-purple-600"></i>AI Search
+                  <div class="bg-white border border-purple-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-purple-300">
+                      <h4 class="font-semibold mb-3 flex items-center text-gray-800">
+                          <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                              <i class="fas fa-magic text-white text-xs"></i>
+                          </div>
+                          AI Search
                       </h4>
                       <textarea id="bulkSearchText" 
                                 placeholder="Find CEOs in technology companies..." 
-                                class="w-full px-3 py-2 border border-gray-300 rounded text-sm h-20"></textarea>
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm h-24 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none"></textarea>
                   </div>
                   
                   <!-- Location Filter -->
-                  <div class="border border-gray-200 rounded-lg p-3">
-                      <h4 class="font-medium mb-3">
-                          <i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>Location
+                  <div class="bg-white border border-blue-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-blue-300">
+                      <h4 class="font-semibold mb-3 flex items-center text-gray-800">
+                          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                              <i class="fas fa-map-marker-alt text-white text-xs"></i>
+                          </div>
+                          Location
                       </h4>
                       <input type="text" 
                              id="locationFilter" 
                              placeholder="e.g. Miami, New York, California" 
-                             class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
-                      <div class="text-xs text-gray-500 mt-1">
+                             class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                      <div class="text-xs text-gray-400 mt-2 font-medium">
                           Apollo: personLocations[]
                       </div>
                   </div>
                   
                   <!-- Job Titles -->
-                  <div class="border border-gray-200 rounded-lg p-3">
-                      <h4 class="font-medium mb-3">
-                          <i class="fas fa-user-tie mr-2 text-green-600"></i>Job Titles
+                  <div class="bg-white border border-green-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-green-300">
+                      <h4 class="font-semibold mb-3 flex items-center text-gray-800">
+                          <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                              <i class="fas fa-user-tie text-white text-xs"></i>
+                          </div>
+                          Job Titles
                       </h4>
-                      <select id="jobTitleFilter" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                      <select id="jobTitleFilter" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all cursor-pointer bg-white">
                           <option value="">Any Title</option>
                           <option value="CEO">CEO</option>
                           <option value="CFO">CFO</option>
@@ -1837,24 +1920,27 @@
                           <option value="Manager">Manager</option>
                           <option value="Head">Head of Department</option>
                       </select>
-                      <div class="text-xs text-gray-500 mt-1">
+                      <div class="text-xs text-gray-400 mt-2 font-medium">
                           Apollo: personTitles[]
                       </div>
                   </div>
                   
                   <!-- Industry -->
-                  <div class="border border-gray-200 rounded-lg p-3">
-                      <h4 class="font-medium mb-3">
-                          <i class="fas fa-industry mr-2 text-orange-600"></i>Industry
+                  <div class="bg-white border border-orange-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-orange-300">
+                      <h4 class="font-semibold mb-3 flex items-center text-gray-800">
+                          <div class="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                              <i class="fas fa-industry text-white text-xs"></i>
+                          </div>
+                          Industry
                       </h4>
-                      <select id="industryFilter" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                      <select id="industryFilter" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all cursor-pointer bg-white">
                           <option value="">Any Industry</option>
                           <option value="Technology">Technology</option>
                           <option value="Software">Software</option>
                           <option value="Finance">Finance</option>
                           <option value="Healthcare">Healthcare</option>
                           <option value="Manufacturing">Manufacturing</option>
-                          <option value="Construction">Construction</option>
+                          <option value="construction">construction</option>
                           <option value="Real Estate">Real Estate</option>
                           <option value="Retail">Retail</option>
                           <option value="E-commerce">E-commerce</option>
@@ -1865,17 +1951,20 @@
                           <option value="Education">Education</option>
                           <option value="Transportation">Transportation</option>
                       </select>
-                      <div class="text-xs text-gray-500">
+                      <div class="text-xs text-gray-400 mt-2 font-medium">
                           Apollo: organizationIndustryTagIds[]
                       </div>
                   </div>
                   
                   <!-- Company Size -->
-                  <div class="border border-gray-200 rounded-lg p-3">
-                      <h4 class="font-medium mb-3">
-                          <i class="fas fa-users mr-2 text-indigo-600"></i>Company Size
+                  <div class="bg-white border border-indigo-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-indigo-300">
+                      <h4 class="font-semibold mb-3 flex items-center text-gray-800">
+                          <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                              <i class="fas fa-users text-white text-xs"></i>
+                          </div>
+                          Company Size
                       </h4>
-                      <select id="companySizeFilter" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                      <select id="companySizeFilter" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer bg-white">
                           <option value="">Any Size</option>
                           <option value="1-10">1-10 employees</option>
                           <option value="11-50">11-50 employees</option>
@@ -1885,17 +1974,20 @@
                           <option value="1001-5000">1001-5000 employees</option>
                           <option value="5001+">5001+ employees</option>
                       </select>
-                      <div class="text-xs text-gray-500">
+                      <div class="text-xs text-gray-400 mt-2 font-medium">
                           Apollo: organizationNumEmployeesRanges[]
                       </div>
                   </div>
                   
                   <!-- Revenue Filter -->
-                  <div class="border border-gray-200 rounded-lg p-3">
-                      <h4 class="font-medium mb-3">
-                          <i class="fas fa-dollar-sign mr-2 text-green-600"></i>Annual Revenue
+                  <div class="bg-white border border-emerald-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-emerald-300">
+                      <h4 class="font-semibold mb-3 flex items-center text-gray-800">
+                          <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                              <i class="fas fa-dollar-sign text-white text-xs"></i>
+                          </div>
+                          Annual Revenue
                       </h4>
-                      <select id="revenueFilter" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                      <select id="revenueFilter" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all cursor-pointer bg-white">
                           <option value="">Any Revenue</option>
                           <option value="0-1M">$0 - $1M</option>
                           <option value="1M-10M">$1M - $10M</option>
@@ -1908,123 +2000,165 @@
               </div>
               
               <!-- Search Buttons -->
-              <div class="mt-6 space-y-3">
+              <div class="mt-8 space-y-3">
                   <button onclick="runScraperCitySearch()" 
-                          class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg">
+                          class="w-full bg-gradient-to-r from-purple-600 via-purple-700 to-blue-600 text-white py-3.5 rounded-xl text-sm font-semibold hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 duration-300">
                       <i class="fas fa-search mr-2"></i>Search via ScraperCity
                   </button>
                   
                   <button onclick="clearAllFilters()" 
-                          class="w-full py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                          class="w-full py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-300 font-medium transition-all">
                       Clear All Filters
                   </button>
               </div>
               
               <!-- Data Source Indicator -->
-              <div class="mt-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border">
-                  <div class="text-xs font-medium text-gray-700 mb-2">Data Pipeline:</div>
-                  <div class="space-y-1 text-xs">
-                      <div class="flex items-center">
-                          <div class="w-2 h-2 bg-purple-500 rounded-full mr-2 animate-pulse"></div>
-                          <span>Apollo.io Database</span>
+              <div class="mt-6 p-4 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 rounded-xl border border-purple-100 shadow-sm">
+                  <div class="text-xs font-semibold text-gray-700 mb-3 flex items-center">
+                      <i class="fas fa-info-circle mr-2 text-purple-600"></i>
+                      Data Pipeline
+                  </div>
+                  <div class="space-y-2 text-xs">
+                      <div class="flex items-center p-2 bg-white rounded-lg shadow-sm">
+                          <div class="w-2 h-2 bg-purple-500 rounded-full mr-3 animate-pulse shadow-sm"></div>
+                          <span class="font-medium text-gray-700">Apollo.io Database</span>
                       </div>
-                      <div class="flex items-center">
-                          <div class="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-                          <span>ScraperCity API</span>
+                      <div class="flex items-center p-2 bg-white rounded-lg shadow-sm">
+                          <div class="w-2 h-2 bg-blue-500 rounded-full mr-3 animate-pulse shadow-sm"></div>
+                          <span class="font-medium text-gray-700">ScraperCity API</span>
                       </div>
-                      <div class="flex items-center">
-                          <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                          <span>Real-time Extraction</span>
+                      <div class="flex items-center p-2 bg-white rounded-lg shadow-sm">
+                          <div class="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse shadow-sm"></div>
+                          <span class="font-medium text-gray-700">Real-time Extraction</span>
                       </div>
                   </div>
               </div>
           </div>
 
           <!-- Main Content Area -->
-          <div class="flex-1 p-6">
+          <div class="flex-1 p-8 bg-gradient-to-br from-white to-gray-50">
               <!-- Initial State -->
-              <div id="leadFinderInitialContent" class="text-center py-16">
-                  <div class="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                      <i class="fas fa-rocket text-3xl text-white"></i>
+              <div id="leadFinderInitialContent" class="text-center py-20">
+                  <div class="relative inline-block mb-8">
+                      <div class="w-24 h-24 bg-gradient-to-br from-purple-500 via-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xl transform hover:scale-110 transition-transform duration-300">
+                          <i class="fas fa-rocket text-4xl text-white"></i>
+                      </div>
+                      <div class="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white animate-pulse"></div>
                   </div>
-                  <h3 class="text-2xl font-bold text-gray-900 mb-3">Real Apollo.io Data via ScraperCity</h3>
-                  <p class="text-gray-600 mb-6 max-w-md mx-auto">
+                  
+                  <h3 class="text-3xl font-bold text-gray-900 mb-4">Real Apollo.io Data via ScraperCity</h3>
+                  <p class="text-gray-600 text-lg mb-10 max-w-lg mx-auto">
                       Search Apollo's 250M+ contact database. Get up to 500 verified contacts per search.
                   </p>
 
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
-                      <div class="p-4 bg-purple-50 rounded-lg">
-                          <i class="fas fa-database text-purple-600 text-2xl mb-2"></i>
-                          <div class="text-sm font-medium text-gray-900">Apollo.io</div>
-                          <div class="text-xs text-gray-600">250M+ contacts</div>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
+                      <div class="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 duration-300">
+                          <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                              <i class="fas fa-database text-white text-2xl"></i>
+                          </div>
+                          <div class="text-base font-bold text-gray-900 mb-1">Apollo.io</div>
+                          <div class="text-sm text-gray-600 font-medium">250M+ contacts</div>
                       </div>
-                      <div class="p-4 bg-blue-50 rounded-lg">
-                          <i class="fas fa-bolt text-blue-600 text-2xl mb-2"></i>
-                          <div class="text-sm font-medium text-gray-900">ScraperCity</div>
-                          <div class="text-xs text-gray-600">Real-time extraction</div>
+                      
+                      <div class="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 duration-300">
+                          <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                              <i class="fas fa-bolt text-white text-2xl"></i>
+                          </div>
+                          <div class="text-base font-bold text-gray-900 mb-1">ScraperCity</div>
+                          <div class="text-sm text-gray-600 font-medium">Real-time extraction</div>
                       </div>
-                      <div class="p-4 bg-green-50 rounded-lg">
-                          <i class="fas fa-check-circle text-green-600 text-2xl mb-2"></i>
-                          <div class="text-sm font-medium text-gray-900">500 Contacts</div>
-                          <div class="text-xs text-gray-600">Per search</div>
+                      
+                      <div class="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 duration-300">
+                          <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                              <i class="fas fa-check-circle text-white text-2xl"></i>
+                          </div>
+                          <div class="text-base font-bold text-gray-900 mb-1">500 Contacts</div>
+                          <div class="text-sm text-gray-600 font-medium">Per search</div>
                       </div>
                   </div>
               </div>
               
               <!-- Loading State -->
-              <div id="searchLoadingState" class="hidden text-center py-16">
-                  <div class="relative mx-auto mb-6">
-                      <div class="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full mx-auto animate-spin"></div>
+              <div id="searchLoadingState" class="hidden text-center py-20">
+                  <div class="relative mx-auto mb-8 inline-block">
+                      <div class="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto animate-spin"></div>
+                      <div class="absolute inset-0 w-20 h-20 border-4 border-transparent border-b-blue-600 rounded-full mx-auto animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
                   </div>
-                  <h3 class="text-xl font-bold text-gray-900 mb-2">Extracting from Apollo.io...</h3>
-                  <p class="text-gray-600 mb-6">ScraperCity is processing your search</p>
+                  <h3 class="text-2xl font-bold text-gray-900 mb-3">Extracting from Apollo.io...</h3>
+                  <p class="text-gray-600 text-lg mb-10">ScraperCity is processing your search</p>
                   
-                  <div class="max-w-md mx-auto">
-                      <div class="space-y-3 text-sm">
-                          <div id="loadingStep1" class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                              <span><i class="fas fa-link mr-2"></i>Building Apollo URL...</span>
-                              <i class="fas fa-spinner fa-spin text-blue-600"></i>
+                  <div class="max-w-xl mx-auto">
+                      <div class="space-y-4 text-sm">
+                          <div id="loadingStep1" class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl shadow-md border border-blue-200">
+                              <span class="font-medium text-gray-700">
+                                  <i class="fas fa-link mr-3 text-blue-600"></i>Building Apollo URL...
+                              </span>
+                              <div class="flex space-x-1">
+                                  <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                                  <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                  <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                              </div>
                           </div>
-                          <div id="loadingStep2" class="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                              <span><i class="fas fa-paper-plane mr-2"></i>Sending to ScraperCity...</span>
-                              <i class="fas fa-spinner fa-spin text-purple-600"></i>
+                          <div id="loadingStep2" class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl shadow-md border border-purple-200">
+                              <span class="font-medium text-gray-700">
+                                  <i class="fas fa-paper-plane mr-3 text-purple-600"></i>Sending to ScraperCity...
+                              </span>
+                              <div class="flex space-x-1">
+                                  <div class="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+                                  <div class="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                  <div class="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                              </div>
                           </div>
-                          <div id="loadingStep3" class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                              <span><i class="fas fa-database mr-2"></i>Extracting contacts...</span>
-                              <i class="fas fa-spinner fa-spin text-green-600"></i>
+                          <div id="loadingStep3" class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl shadow-md border border-green-200">
+                              <span class="font-medium text-gray-700">
+                                  <i class="fas fa-database mr-3 text-green-600"></i>Extracting contacts...
+                              </span>
+                              <div class="flex space-x-1">
+                                  <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce"></div>
+                                  <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                  <div class="w-2 h-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                              </div>
                           </div>
                       </div>
                   </div>
                   
                   <!-- Progress Counter -->
-                  <div id="progressCounter" class="mt-6 text-lg font-semibold text-gray-700 hidden">
-                      Found: <span id="currentLeadCount" class="text-purple-600">0</span> / <span class="text-gray-500">500</span> leads
+                  <div id="progressCounter" class="mt-10 hidden">
+                      <div class="inline-block px-8 py-4 bg-white rounded-2xl shadow-xl border border-gray-200">
+                          <div class="text-sm text-gray-600 mb-2 font-medium">Progress</div>
+                          <div class="text-2xl font-bold">
+                              <span id="currentLeadCount" class="text-purple-600">0</span>
+                              <span class="text-gray-400 mx-2">/</span>
+                              <span class="text-gray-500">500</span>
+                              <span class="text-base text-gray-600 ml-2">leads</span>
+                          </div>
+                      </div>
                   </div>
               </div>
               
               <!-- Search Results -->
               <div id="searchResults" class="hidden">
                   <!-- Results Header -->
-                  <div class="flex items-center justify-between mb-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border">
-                      <div class="flex items-center space-x-4">
-                          <label class="flex items-center space-x-2 cursor-pointer">
+                  <div class="flex items-center justify-between mb-8 p-5 bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 rounded-2xl border border-purple-100 shadow-lg">
+                      <div class="flex items-center space-x-6">
+                          <label class="flex items-center space-x-3 cursor-pointer group">
                               <input type="checkbox" id="selectAllLeads" onchange="toggleSelectAllLeads()" 
-                                     class="rounded text-purple-600">
-                              <span class="text-sm font-medium">Select all</span>
+                                     class="rounded-md text-purple-600 w-5 h-5 border-2 border-gray-300 focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer">
+                              <span class="text-sm font-semibold text-gray-700 group-hover:text-purple-600 transition-colors">Select all</span>
                           </label>
-                          <div class="text-sm text-gray-600">
-                              <span id="selectedLeadsCount" class="font-bold">0</span> selected of 
-                              <span id="totalLeadsCount" class="font-bold">0</span> results
+                          <div class="text-sm text-gray-700 bg-white px-4 py-2 rounded-lg shadow-sm">
+                              <span id="selectedLeadsCount" class="font-bold text-purple-600">0</span> selected of 
+                              <span id="totalLeadsCount" class="font-bold text-gray-900">0</span> results
                           </div>
                       </div>
                       
                       <div class="flex items-center space-x-3">
                           <button onclick="addSelectedAsProspects()" id="addProspectsBtn" 
-                                  class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                                  class="hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
                               <i class="fas fa-user-plus mr-2"></i>Add as Prospects
                           </button>
                           <button onclick="exportSelectedLeads()" id="exportBtn" 
-                                  class="hidden bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+                                  class="hidden bg-gradient-to-r from-green-600 to-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
                               <i class="fas fa-download mr-2"></i>Export CSV
                           </button>
                       </div>
@@ -2039,7 +2173,6 @@
       </div>
   </div>
 </div>
-
 <!-- MODAL MEJORADO PARA VER DETALLES DEL LEAD -->
 <div id="leadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
   <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -2122,7 +2255,6 @@
 <script>
   // ========== SCRAPERCITY REAL-TIME INTEGRATION - VERSIÓN FINAL ARREGLADA ==========
   let scraperCityResults = [];
-  let selectedLeadIds = [];
   let currentSearchParams = {};
   let currentApolloUrl = '';
   let currentRunId = null;
@@ -2131,10 +2263,17 @@
   let currentLeadForModal = null;
   let timerInterval = null;
   
+  // ========== NUEVO: VARIABLE PARA BÚSQUEDA EN SEGUNDO PLANO ==========
+  let activeSearchInBackground = false;
+  
   // FUNCIÓN PRINCIPAL - Iniciar búsqueda REAL con ScraperCity
   async function runScraperCitySearch() {
       try {
           console.log('🚀 Starting REAL ScraperCity + Apollo search...');
+          
+          // ========== NUEVO: MARCAR BÚSQUEDA COMO ACTIVA ==========
+          activeSearchInBackground = true;
+          updateSearchIndicator(true);
           
           // Limpiar resultados anteriores y timers
           clearInterval(pollInterval);
@@ -2160,6 +2299,9 @@
           if (!searchData.location && !searchData.jobTitle && !searchData.industry) {
               showNotification('Por favor selecciona al menos un filtro', 'warning');
               hideLoadingState();
+              // ========== NUEVO: DESACTIVAR BÚSQUEDA ==========
+              activeSearchInBackground = false;
+              updateSearchIndicator(false);
               return;
           }
           
@@ -2200,6 +2342,9 @@
           console.error('❌ Error:', error);
           hideLoadingState();
           showNotification('Error: ' + error.message, 'error');
+          // ========== NUEVO: DESACTIVAR BÚSQUEDA EN CASO DE ERROR ==========
+          activeSearchInBackground = false;
+          updateSearchIndicator(false);
       }
   }
   
@@ -2289,6 +2434,9 @@
                       } else {
                           hideLoadingState();
                           displayNoResults('No se encontraron resultados. Intenta hacer otra búsqueda.');
+                          // ========== NUEVO: DESACTIVAR BÚSQUEDA ==========
+                          activeSearchInBackground = false;
+                          updateSearchIndicator(false);
                       }
                   }
               }
@@ -2311,6 +2459,9 @@
       
       if (!leads || leads.length === 0) {
           displayNoResults('No se encontraron leads.');
+          // ========== NUEVO: DESACTIVAR BÚSQUEDA ==========
+          activeSearchInBackground = false;
+          updateSearchIndicator(false);
           return;
       }
       
@@ -2322,6 +2473,9 @@
       
       document.getElementById('searchResults').classList.remove('hidden');
       showNotification(`✅ ¡Encontrados ${leads.length} leads reales!`, 'success');
+      
+      // ========== NUEVO: BÚSQUEDA COMPLETADA ==========
+      onSearchComplete(leads.length);
   }
   
   // Crear card detallada del lead
@@ -2391,243 +2545,250 @@
                           </div>
                       </div>
                       
-                      <div class="flex flex-wrap gap-2 mt-3">
-                          ${lead.industry ? `
-                              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                  <i class="fas fa-industry mr-1 text-xs"></i>${lead.industry}
-                              </span>
-                          ` : ''}
-                          ${lead.company_size ? `
-                              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  <i class="fas fa-users mr-1 text-xs"></i>${lead.company_size}
-                              </span>
-                          ` : ''}
-                          ${lead.seniority_level ? `
-                              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  <i class="fas fa-user-tie mr-1 text-xs"></i>${lead.seniority_level}
-                              </span>
-                          ` : ''}
-                          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              <i class="fas fa-star mr-1 text-xs"></i>Score: ${lead.score || 0}
-                          </span>
-                          ${lead.qualified ? `
-                              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  <i class="fas fa-check-circle mr-1 text-xs"></i>Calificado
-                              </span>
-                          ` : ''}
-                      </div>
-                      
                       ${lead.linkedin_url ? `
                           <div class="mt-3">
                               <a href="${lead.linkedin_url}" target="_blank" 
-                                 class="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
-                                  <i class="fab fa-linkedin"></i>Ver LinkedIn
+                                 class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                  <i class="fab fa-linkedin mr-1"></i>Ver perfil de LinkedIn
                               </a>
                           </div>
                       ` : ''}
-                  </div>
-                  
-                  <div class="flex-shrink-0 flex flex-col gap-2">
-                      <button onclick='viewLeadDetails(${JSON.stringify(lead).replace(/'/g, "\\'")})' 
-                              class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                          <i class="fas fa-eye mr-1"></i>Ver
-                      </button>
-                      <button onclick="addSingleProspect('${lead.id}')" 
-                              class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-                          <i class="fas fa-user-plus mr-1"></i>Añadir
-                      </button>
+                      
+                      <div class="flex justify-end mt-4 gap-2">
+                          <button onclick="viewLeadDetails(${lead.id})" 
+                                  class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors">
+                              <i class="fas fa-eye mr-1"></i>Ver más
+                          </button>
+                          <button onclick="addToProspects(${lead.id})" 
+                                  class="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg text-sm font-medium hover:bg-purple-50 transition-colors">
+                              <i class="fas fa-user-plus mr-1"></i>Agregar
+                          </button>
+                      </div>
                   </div>
               </div>
           </div>
       `;
   }
   
-  // FUNCIÓN MEJORADA para ver detalles del lead con el modal bonito
-  function viewLeadDetails(lead) {
-      currentLeadForModal = lead;
-      
-      // Populate modal with lead data
-      document.getElementById('modalAvatar').className = `w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg ${getAvatarGradient(lead.name)}`;
-      document.getElementById('modalAvatar').textContent = getInitials(lead.name);
-      
-      document.getElementById('modalName').textContent = lead.name || 'Sin nombre';
-      document.getElementById('modalTitle').textContent = lead.title || 'Sin título';
-      document.getElementById('modalCompany').textContent = lead.company || 'Sin empresa';
-      document.getElementById('modalEmail').textContent = lead.email || 'Sin email';
-      document.getElementById('modalPhone').textContent = lead.phone || 'Sin teléfono';
-      document.getElementById('modalLocation').textContent = lead.location || 'Sin ubicación';
-      document.getElementById('modalIndustry').textContent = lead.industry || 'Sin industria';
-      document.getElementById('modalCompanySize').textContent = lead.company_size || 'Desconocido';
-      document.getElementById('modalEmployees').textContent = lead.employee_count || 'N/A';
-      
-      // Score and status
-      document.getElementById('modalScore').textContent = `Score: ${lead.score || 0}`;
-      document.getElementById('modalSeniority').textContent = lead.seniority_level || 'Staff';
-      
-      const qualifiedEl = document.getElementById('modalQualified');
-      if (lead.qualified) {
-          qualifiedEl.textContent = '✓ Calificado';
-          qualifiedEl.className = 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
-      } else {
-          qualifiedEl.textContent = 'No Calificado';
-          qualifiedEl.className = 'px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600';
-      }
-      
-      // Source badge
-      const sourceInfo = getSourceInfo(lead.source);
-      const sourceEl = document.getElementById('modalSource');
-      sourceEl.className = `px-3 py-1 rounded-full text-xs font-bold shadow ${sourceInfo.badgeClass}`;
-      sourceEl.innerHTML = `<i class="${sourceInfo.icon} mr-1"></i>${sourceInfo.label}`;
-      
-      // Links
-      const linkedInBtn = document.getElementById('modalLinkedIn');
-      const websiteBtn = document.getElementById('modalWebsite');
-      
-      if (lead.linkedin_url) {
-          linkedInBtn.href = lead.linkedin_url;
-          linkedInBtn.classList.remove('hidden');
-      } else {
-          linkedInBtn.classList.add('hidden');
-      }
-      
-      if (lead.website || lead.company_website) {
-          websiteBtn.href = lead.website || lead.company_website;
-          websiteBtn.classList.remove('hidden');
-      } else {
-          websiteBtn.classList.add('hidden');
-      }
-      
-      // Show modal
-      document.getElementById('leadModal').classList.remove('hidden');
-  }
-  
-  function closeleadModal() {
-      document.getElementById('leadModal').classList.add('hidden');
-      currentLeadForModal = null;
-  }
-  
-  function addLeadToSequence() {
-      if (currentLeadForModal) {
-          console.log('Añadiendo lead a secuencia:', currentLeadForModal.id);
-          showNotification('Lead añadido a la secuencia de email', 'success');
-          closeleadModal();
-      }
-  }
-  
-  // Close modal on background click
-  document.getElementById('leadModal')?.addEventListener('click', function(e) {
-      if (e.target === this) {
-          closeleadModal();
-      }
-  });
-  
-  // Funciones adicionales necesarias
-  function addSingleProspect(leadId) {
-      console.log('Añadiendo prospecto:', leadId);
-      fetch('/api/add-prospect', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({leadId: leadId})
-      }).then(response => {
-          if(response.ok) {
-              showNotification('¡Lead añadido como prospecto!', 'success');
-          }
-      });
-  }
-  
-  function toggleSelectAllLeads() {
-      const selectAll = document.getElementById('selectAllLeads');
-      const checkboxes = document.querySelectorAll('.lead-checkbox');
-      checkboxes.forEach(cb => cb.checked = selectAll.checked);
-      updateSelectedLeads();
-  }
-  
-  function addSelectedAsProspects() {
-      if(selectedLeadIds.length === 0) {
-          showNotification('No hay leads seleccionados', 'warning');
-          return;
-      }
-      console.log('Añadiendo prospectos:', selectedLeadIds);
-      showNotification(`Añadiendo ${selectedLeadIds.length} prospectos...`, 'info');
-  }
-  
-  function exportSelectedLeads() {
-      if(selectedLeadIds.length === 0) {
-          showNotification('No hay leads seleccionados', 'warning');
-          return;
-      }
-      console.log('Exportando leads:', selectedLeadIds);
-      
-      // Crear CSV con los leads seleccionados
-      const selectedLeads = scraperCityResults.filter(lead => 
-          selectedLeadIds.includes(lead.id?.toString())
-      );
-      const csv = convertToCSV(selectedLeads);
-      downloadCSV(csv, 'leads_export.csv');
-  }
-  
-  // Helper functions
+  // Helper: Obtener información de fuente
   function getSourceInfo(source) {
-      const sourceMap = {
-          'apollo_via_scrapercity': {
-              label: 'Apollo.io',
-              icon: 'fas fa-database',
-              badgeClass: 'bg-gradient-to-r from-purple-500 to-purple-700 text-white'
-          },
-          'test_fallback': {
-              label: 'Test Data',
-              icon: 'fas fa-vial',
-              badgeClass: 'bg-gradient-to-r from-gray-500 to-gray-700 text-white'
-          },
-          'linkedin': {
-              label: 'LinkedIn',
-              icon: 'fab fa-linkedin',
-              badgeClass: 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
-          }
+      if (!source) return { 
+          label: 'Desconocido', 
+          icon: 'fas fa-question-circle',
+          badgeClass: 'bg-gray-100 text-gray-700'
       };
       
-      // Si el source contiene "apollo" o "scrapercity", usar Apollo
-      if (source && (source.toLowerCase().includes('apollo') || source.toLowerCase().includes('scrapercity'))) {
-          return sourceMap['apollo_via_scrapercity'];
+      if (source.includes('apollo') || source.includes('scrapercity')) {
+          return { 
+              label: 'Apollo.io', 
+              icon: 'fas fa-rocket',
+              badgeClass: 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+          };
       }
       
-      return sourceMap[source] || {
-          label: source || 'Desconocido',
-          icon: 'fas fa-circle',
-          badgeClass: 'bg-gray-500 text-white'
+      return { 
+          label: source, 
+          icon: 'fas fa-database',
+          badgeClass: 'bg-blue-100 text-blue-700'
       };
   }
   
-  function getAvatarGradient(name) {
-      const gradients = [
-          'bg-gradient-to-br from-purple-400 to-purple-600',
-          'bg-gradient-to-br from-blue-400 to-blue-600',
-          'bg-gradient-to-br from-green-400 to-green-600',
-          'bg-gradient-to-br from-yellow-400 to-yellow-600',
-          'bg-gradient-to-br from-red-400 to-red-600',
-          'bg-gradient-to-br from-indigo-400 to-indigo-600'
-      ];
-      
-      const index = name ? name.charCodeAt(0) % gradients.length : 0;
-      return gradients[index];
-  }
-  
+  // Helper: Obtener iniciales
   function getInitials(name) {
-      if (!name) return '?';
-      const parts = name.split(' ').filter(p => p.length > 0);
+      if (!name) return '??';
+      const parts = name.trim().split(' ');
       if (parts.length >= 2) {
-          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+          return (parts[0][0] + parts[1][0]).toUpperCase();
       }
       return name.substring(0, 2).toUpperCase();
   }
   
-  // Estados de loading
+  // Helper: Gradiente de avatar
+  function getAvatarGradient(name) {
+      const gradients = [
+          'bg-gradient-to-br from-purple-500 to-pink-500',
+          'bg-gradient-to-br from-blue-500 to-cyan-500',
+          'bg-gradient-to-br from-green-500 to-teal-500',
+          'bg-gradient-to-br from-orange-500 to-red-500',
+          'bg-gradient-to-br from-indigo-500 to-purple-500',
+          'bg-gradient-to-br from-pink-500 to-rose-500'
+      ];
+      
+      const index = (name || '').length % gradients.length;
+      return gradients[index];
+  }
+  
+  // Ver detalles completos del lead en modal
+  function viewLeadDetails(leadId) {
+      const lead = scraperCityResults.find(l => l.id == leadId);
+      if (!lead) return;
+      
+      currentLeadForModal = lead;
+      
+      // Crear modal con todos los detalles
+      const modal = document.createElement('div');
+      modal.id = 'leadDetailModal';
+      modal.className = 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4';
+      modal.innerHTML = `
+          <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+                  <div class="flex items-start justify-between">
+                      <div class="flex items-center gap-4">
+                          <div class="w-16 h-16 rounded-full ${getAvatarGradient(lead.name)} flex items-center justify-center text-white font-bold text-2xl border-4 border-white shadow-lg">
+                              ${getInitials(lead.name)}
+                          </div>
+                          <div>
+                              <h2 class="text-2xl font-bold">${lead.name || 'Sin nombre'}</h2>
+                              <p class="text-purple-100">${lead.title || 'Sin título'}</p>
+                              <p class="text-purple-200 text-sm">${lead.company || 'Sin empresa'}</p>
+                          </div>
+                      </div>
+                      <button onclick="closeLeadModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors">
+                          <i class="fas fa-times text-xl"></i>
+                      </button>
+                  </div>
+              </div>
+              
+              <div class="p-6 space-y-6">
+                  <!-- Información de contacto -->
+                  <div class="bg-gray-50 rounded-xl p-4">
+                      <h3 class="font-bold text-gray-900 mb-3 flex items-center">
+                          <i class="fas fa-address-card mr-2 text-purple-600"></i>
+                          Información de Contacto
+                      </h3>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex items-center gap-3">
+                              <i class="fas fa-envelope text-gray-400"></i>
+                              <div>
+                                  <p class="text-xs text-gray-500">Email</p>
+                                  <p class="text-sm font-medium text-gray-900">${lead.email || 'No disponible'}</p>
+                              </div>
+                          </div>
+                          <div class="flex items-center gap-3">
+                              <i class="fas fa-phone text-gray-400"></i>
+                              <div>
+                                  <p class="text-xs text-gray-500">Teléfono</p>
+                                  <p class="text-sm font-medium text-gray-900">${lead.phone || 'No disponible'}</p>
+                              </div>
+                          </div>
+                          <div class="flex items-center gap-3">
+                              <i class="fas fa-map-marker-alt text-gray-400"></i>
+                              <div>
+                                  <p class="text-xs text-gray-500">Ubicación</p>
+                                  <p class="text-sm font-medium text-gray-900">${lead.location || 'No disponible'}</p>
+                              </div>
+                          </div>
+                          <div class="flex items-center gap-3">
+                              <i class="fas fa-globe text-gray-400"></i>
+                              <div>
+                                  <p class="text-xs text-gray-500">Website</p>
+                                  ${lead.website ? 
+                                      `<a href="${lead.website}" target="_blank" class="text-sm font-medium text-blue-600 hover:underline">${lead.website}</a>` :
+                                      '<p class="text-sm font-medium text-gray-900">No disponible</p>'
+                                  }
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <!-- Información de la empresa -->
+                  <div class="bg-blue-50 rounded-xl p-4">
+                      <h3 class="font-bold text-gray-900 mb-3 flex items-center">
+                          <i class="fas fa-building mr-2 text-blue-600"></i>
+                          Información de la Empresa
+                      </h3>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                              <p class="text-xs text-gray-500">Empresa</p>
+                              <p class="text-sm font-medium text-gray-900">${lead.company || 'No disponible'}</p>
+                          </div>
+                          <div>
+                              <p class="text-xs text-gray-500">Industria</p>
+                              <p class="text-sm font-medium text-gray-900">${lead.industry || 'No disponible'}</p>
+                          </div>
+                          ${lead.company_size ? `
+                              <div>
+                                  <p class="text-xs text-gray-500">Tamaño</p>
+                                  <p class="text-sm font-medium text-gray-900">${lead.company_size}</p>
+                              </div>
+                          ` : ''}
+                          ${lead.revenue ? `
+                              <div>
+                                  <p class="text-xs text-gray-500">Revenue</p>
+                                  <p class="text-sm font-medium text-gray-900">${lead.revenue}</p>
+                              </div>
+                          ` : ''}
+                      </div>
+                  </div>
+                  
+                  <!-- LinkedIn -->
+                  ${lead.linkedin_url ? `
+                      <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white">
+                          <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-3">
+                                  <i class="fab fa-linkedin text-2xl"></i>
+                                  <div>
+                                      <p class="font-semibold">Perfil de LinkedIn</p>
+                                      <p class="text-sm text-blue-100">Conecta con este lead en LinkedIn</p>
+                                  </div>
+                              </div>
+                              <a href="${lead.linkedin_url}" target="_blank" 
+                                 class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+                                  Ver Perfil
+                              </a>
+                          </div>
+                      </div>
+                  ` : ''}
+                  
+                  <!-- Metadata -->
+                  <div class="border-t pt-4">
+                      <div class="flex items-center justify-between text-xs text-gray-500">
+                          <div class="flex items-center gap-4">
+                              <span><i class="fas fa-database mr-1"></i>Fuente: ${getSourceInfo(lead.source).label}</span>
+                              <span><i class="fas fa-calendar mr-1"></i>Agregado: ${new Date(lead.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <span class="text-gray-400">ID: ${lead.id}</span>
+                      </div>
+                  </div>
+                  
+                  <!-- Botones de acción -->
+                  <div class="flex gap-3">
+                      <button onclick="addToProspects(${lead.id}); closeLeadModal();" 
+                              class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all">
+                          <i class="fas fa-user-plus mr-2"></i>Agregar a Prospects
+                      </button>
+                      <button onclick="closeLeadModal()" 
+                              class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                          Cerrar
+                      </button>
+                  </div>
+              </div>
+          </div>
+      `;
+      
+      document.body.appendChild(modal);
+  }
+  
+  function closeLeadModal() {
+      const modal = document.getElementById('leadDetailModal');
+      if (modal) modal.remove();
+  }
+  
   function showRealTimeLoadingState() {
       document.getElementById('leadFinderInitialContent').classList.add('hidden');
       document.getElementById('searchResults').classList.add('hidden');
       
       const loadingState = document.getElementById('searchLoadingState');
       loadingState.classList.remove('hidden');
+      
+      // Resetear steps
+      for (let i = 1; i <= 3; i++) {
+          const stepEl = document.getElementById(`loadingStep${i}`);
+          if (stepEl) {
+              const icon = stepEl.querySelector('i:last-child');
+              icon.className = 'fas fa-circle text-gray-400';
+          }
+      }
       
       // Timer
       if (!document.getElementById('timeElapsed')) {
@@ -2796,14 +2957,60 @@
       document.body.removeChild(link);
   }
   
+  // ========== NUEVAS FUNCIONES PARA BÚSQUEDA EN SEGUNDO PLANO ==========
+  
+  // Función para mostrar/ocultar indicador de búsqueda activa
+  function updateSearchIndicator(isActive) {
+      const badge = document.getElementById('leadfinderBadge');
+      if (badge) {
+          badge.style.display = isActive ? 'inline-block' : 'none';
+      }
+      
+      // Mostrar notificación flotante
+      if (isActive) {
+          showNotification('🔍 Búsqueda iniciada. Puedes navegar libremente, te avisaremos cuando termine.', 'info');
+      }
+  }
+  
+  // Función que se ejecuta cuando la búsqueda termina
+  function onSearchComplete(leadsCount) {
+      activeSearchInBackground = false;
+      updateSearchIndicator(false);
+      
+      // Si no estamos en leadfinder, mostrar notificación especial
+      const leadFinderSection = document.getElementById('leadfinder-section');
+      if (leadFinderSection && leadFinderSection.classList.contains('hidden')) {
+          const notification = document.createElement('div');
+          notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-xl z-50 flex items-center gap-3 cursor-pointer hover:bg-green-600 transition-all';
+          notification.innerHTML = `
+              <i class="fas fa-check-circle text-2xl"></i>
+              <div>
+                  <p class="font-bold">¡Búsqueda completada!</p>
+                  <p class="text-sm">${leadsCount} leads encontrados. Click para ver resultados.</p>
+              </div>
+          `;
+          
+          notification.onclick = () => {
+              showSection('leadfinder');
+              notification.remove();
+          };
+          
+          document.body.appendChild(notification);
+          
+          setTimeout(() => {
+              notification.style.opacity = '0';
+              setTimeout(() => notification.remove(), 300);
+          }, 10000);
+      }
+  }
+  
   // Inicialización
-  console.log('✅ ScraperCity Real-Time Integration Cargado - VERSIÓN FINAL');
-  // Inicialización
-  console.log('✅ ScraperCity Real-Time Integration Cargado - VERSIÓN FINAL');
+  console.log('✅ ScraperCity Real-Time Integration Cargado - VERSIÓN CON BÚSQUEDA EN SEGUNDO PLANO');
   console.log('🎯 457 leads esperados de ScraperCity');
   console.log('⏳ Polling extendido a 10 minutos para capturar todos los leads');
   console.log('🔍 Detección inteligente de fuente para Apollo/ScraperCity');
   console.log('📊 Modal mejorado con todos los detalles del lead');
+  console.log('🚀 NUEVO: Sistema de búsqueda en segundo plano activo');
 </script>
 
 <!-- ESTILOS MEJORADOS -->
@@ -3007,7 +3214,7 @@
         <option value="Finance">Finance</option>
         <option value="Healthcare">Healthcare</option>
         <option value="Manufacturing">Manufacturing</option>
-        <option value="Construction">Construction</option>
+        <option value="construction">construction</option>
         <option value="Real Estate">Real Estate</option>
         <option value="Retail">Retail</option>
         <option value="E-commerce">E-commerce</option>
@@ -3038,11 +3245,340 @@
         <option value="premium">⭐ Premium Only</option>
         <option value="regular">Regular Only</option>
     </select>
+
+    <!-- PEGAR DESPUÉS DEL DROPDOWN "All Leads" -->
+<button id="lastScraperPull" onclick="filterLastBatch()" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:from-purple-700 hover:to-indigo-700 transition shadow-lg">
+  <i class="fas fa-clock-rotate-left"></i>
+  <span>Last Pull</span>
+  <span id="lastPullCount" class="bg-white bg-opacity-30 px-2 py-1 rounded-full text-xs font-bold">0</span>
+</button>
     </div>
   </div>
   
   <div class="bg-white rounded-lg border border-gray-200">
     <div class="overflow-x-auto">
+
+      <!-- PEGAR ANTES DE <table> EN PROSPECTS -->
+<div id="lastBatchAlert" class="hidden mb-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+  <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+          <div class="bg-purple-600 text-white rounded-full p-2">
+              <i class="fas fa-download text-sm"></i>
+          </div>
+          <div>
+              <p class="font-semibold text-purple-900">Viewing Last ScraperCity Extraction</p>
+              <p class="text-sm text-purple-700">
+                  <span id="batchLeadsCount">0</span> leads from 
+                  "<span id="batchQuery">ScraperCity</span>"
+              </p>
+          </div>
+      </div>
+      <div class="flex items-center space-x-2">
+          <button onclick="selectAllBatch()" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">
+              Select All
+          </button>
+          <button onclick="clearBatchFilter()" class="text-purple-600">
+              <i class="fas fa-times"></i>
+          </button>
+      </div>
+  </div>
+</div>
+
+
+<!-- =====================================================
+     BULK ACTIONS BAR
+     Agregar en index.html después de la alerta "Viewing Last..."
+     ===================================================== -->
+
+<!-- AGREGAR DESPUÉS DE LA ALERTA DE "Viewing Last..." -->
+<div id="bulkActionsBar" class="hidden fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white shadow-2xl rounded-lg border border-gray-200 px-6 py-4 z-50">
+  <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-2">
+          <div class="w-3 h-3 bg-purple-600 rounded-full animate-pulse"></div>
+          <span class="font-medium text-gray-900">
+              <span id="selectedLeadsCount">0</span> leads selected
+          </span>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+          <!-- Add to Sequence -->
+          <button onclick="showAddToSequenceModal()" 
+                  class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-lg hover:shadow-xl">
+              <i class="fas fa-plus-circle"></i>
+              <span>Add to Sequence</span>
+          </button>
+          
+          <!-- Select All -->
+          <button onclick="selectAllVisibleLeads()" 
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all">
+              <i class="fas fa-check-double"></i>
+              <span>Select All</span>
+          </button>
+          
+          <!-- Clear Selection -->
+          <button onclick="clearLeadSelection()" 
+                  class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center space-x-2 transition-all">
+              <i class="fas fa-times"></i>
+              <span>Clear</span>
+          </button>
+      </div>
+  </div>
+</div>
+
+<!-- MODAL: Add to Sequence -->
+<div id="addToSequenceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      <div class="p-6">
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-6">
+              <h3 class="text-2xl font-bold text-gray-900">
+                  <i class="fas fa-layer-group mr-2 text-purple-600"></i>
+                  Add to Sequence
+              </h3>
+              <button onclick="closeAddToSequenceModal()" class="text-gray-400 hover:text-gray-600">
+                  <i class="fas fa-times text-xl"></i>
+              </button>
+          </div>
+          
+          <!-- Selected Count -->
+          <div class="mb-6 p-4 bg-purple-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                  <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                      <i class="fas fa-users text-white text-xl"></i>
+                  </div>
+                  <div>
+                      <div class="text-2xl font-bold text-purple-600" id="modalSelectedCount">0</div>
+                      <div class="text-sm text-gray-600">Leads selected</div>
+                  </div>
+              </div>
+          </div>
+          
+          <!-- Sequence Selection -->
+          <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Select Sequence
+              </label>
+              <select id="targetSequenceSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                  <option value="">Loading sequences...</option>
+              </select>
+          </div>
+          
+          <!-- Options -->
+          <div class="mb-6 space-y-3">
+              <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                  <input type="checkbox" id="startImmediately" checked class="rounded text-purple-600">
+                  <div>
+                      <div class="font-medium text-gray-900">Start sequence immediately</div>
+                      <div class="text-xs text-gray-500">Begin sending emails right away</div>
+                  </div>
+              </label>
+              
+              <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                  <input type="checkbox" id="verifyEmails" class="rounded text-purple-600">
+                  <div>
+                      <div class="font-medium text-gray-900">Verify emails before sending</div>
+                      <div class="text-xs text-gray-500">Check email validity (recommended)</div>
+                  </div>
+              </label>
+          </div>
+          
+          <!-- Actions -->
+          <div class="flex justify-end space-x-3">
+              <button onclick="closeAddToSequenceModal()" 
+                      class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all">
+                  Cancel
+              </button>
+              <button onclick="confirmAddToSequence()" 
+                      class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl">
+                  <i class="fas fa-check mr-2"></i>
+                  Add to Sequence
+              </button>
+          </div>
+      </div>
+  </div>
+</div>
+
+<script>
+// ========== GLOBAL STATE ==========
+let selectedLeadIds = [];
+
+// ========== CHECKBOX TOGGLE ==========
+function toggleLeadCheckbox(leadId, checkbox) {
+  if (checkbox.checked) {
+      if (!selectedLeadIds.includes(leadId)) {
+          selectedLeadIds.push(leadId);
+      }
+  } else {
+      selectedLeadIds = selectedLeadIds.filter(id => id !== leadId);
+  }
+  
+  updateBulkActionsBar();
+}
+
+// ========== UPDATE BULK ACTIONS BAR ==========
+function updateBulkActionsBar() {
+  const bar = document.getElementById('bulkActionsBar');
+  const count = document.getElementById('selectedLeadsCount');
+  
+  if (selectedLeadIds.length > 0) {
+      bar.classList.remove('hidden');
+      count.textContent = selectedLeadIds.length;
+  } else {
+      bar.classList.add('hidden');
+  }
+}
+
+// ========== SELECT ALL VISIBLE ==========
+function selectAllVisibleLeads() {
+  const checkboxes = document.querySelectorAll('.lead-checkbox:not(:checked)');
+  checkboxes.forEach(cb => {
+      cb.checked = true;
+      const leadId = parseInt(cb.dataset.leadId);
+      if (!selectedLeadIds.includes(leadId)) {
+          selectedLeadIds.push(leadId);
+      }
+  });
+  updateBulkActionsBar();
+  showNotification(`Selected ${checkboxes.length} leads`, 'success');
+}
+
+// ========== CLEAR SELECTION ==========
+function clearLeadSelection() {
+  document.querySelectorAll('.lead-checkbox').forEach(cb => {
+      cb.checked = false;
+  });
+  selectedLeadIds = [];
+  updateBulkActionsBar();
+  showNotification('Selection cleared', 'info');
+}
+
+// ========== SHOW ADD TO SEQUENCE MODAL ==========
+async function showAddToSequenceModal() {
+  if (selectedLeadIds.length === 0) {
+      showNotification('Please select at least one lead', 'warning');
+      return;
+  }
+  
+  const modal = document.getElementById('addToSequenceModal');
+  const countSpan = document.getElementById('modalSelectedCount');
+  const select = document.getElementById('targetSequenceSelect');
+  
+  countSpan.textContent = selectedLeadIds.length;
+  
+  // Load sequences
+  try {
+      const response = await fetch('/api/sequences');
+      const data = await response.json();
+      
+      if (data.success && data.sequences) {
+          select.innerHTML = '<option value="">-- Select a sequence --</option>';
+          data.sequences.forEach(seq => {
+              const option = document.createElement('option');
+              option.value = seq.id;
+              option.textContent = `${seq.name} (${seq.status})`;
+              select.appendChild(option);
+          });
+      } else {
+          select.innerHTML = '<option value="">No sequences available</option>';
+      }
+  } catch (error) {
+      console.error('Error loading sequences:', error);
+      select.innerHTML = '<option value="">Error loading sequences</option>';
+  }
+  
+  modal.classList.remove('hidden');
+}
+
+// ========== CLOSE MODAL ==========
+function closeAddToSequenceModal() {
+  document.getElementById('addToSequenceModal').classList.add('hidden');
+}
+
+// ========== CONFIRM ADD TO SEQUENCE ==========
+async function confirmAddToSequence() {
+  const sequenceId = document.getElementById('targetSequenceSelect').value;
+  const startImmediately = document.getElementById('startImmediately').checked;
+  const verifyEmails = document.getElementById('verifyEmails').checked;
+  
+  if (!sequenceId) {
+      showNotification('Please select a sequence', 'warning');
+      return;
+  }
+  
+  if (selectedLeadIds.length === 0) {
+      showNotification('No leads selected', 'warning');
+      return;
+  }
+  
+  try {
+      showNotification('Adding leads to sequence...', 'info');
+      
+      const response = await fetch('/api/sequences/add-leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              sequence_id: sequenceId,
+              lead_ids: selectedLeadIds,
+              start_immediately: startImmediately,
+              verify_emails: verifyEmails
+          })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+          showNotification(`✅ Added ${selectedLeadIds.length} leads to sequence!`, 'success');
+          closeAddToSequenceModal();
+          clearLeadSelection();
+          
+          // Reload prospects to reflect changes
+          if (typeof loadProspects === 'function') {
+              loadProspects();
+          }
+      } else {
+          showNotification(`Error: ${data.error}`, 'error');
+      }
+  } catch (error) {
+      console.error('Error adding to sequence:', error);
+      showNotification('Error adding leads to sequence', 'error');
+  }
+}
+
+console.log('✅ Bulk actions loaded');
+</script>
+
+<style>
+/* Animación para el bulk actions bar */
+#bulkActionsBar {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+      transform: translate(-50%, 100%);
+      opacity: 0;
+  }
+  to {
+      transform: translate(-50%, 0);
+      opacity: 1;
+  }
+}
+
+/* Mejorar checkboxes */
+.lead-checkbox {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.lead-checkbox:checked {
+  background-color: #9333ea;
+  border-color: #9333ea;
+}
+</style>
+
+
+
       <table class="w-full">
         <thead class="bg-gray-50">
           <tr>
@@ -3435,299 +3971,1092 @@
 <!-- REEMPLAZA el modal de Create Sequence con este código actualizado -->
 
 <!-- Create Sequence Modal con Rotación de Emails -->
-<div id="createSequenceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-  <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="p-6 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-gray-900">Create New Sequence</h3>
-          <button onclick="closeModal('createSequenceModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-      
-      <div class="p-6">
-        <form id="sequenceForm" onsubmit="submitSequenceForm(event)">
-          <div class="space-y-6">
-            <!-- Nombre y Descripción -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Sequence Name</label>
-              <input type="text" id="sequenceName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" 
-                     placeholder="Enter sequence name" required>
+<!-- =====================================================
+     CREATE SEQUENCE MODAL - CON AUTO-LOAD DE MAILBOXES
+     Reemplazar el modal completo en index.html
+     ===================================================== -->
+
+     <div id="createSequenceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <!-- Header -->
+          <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-bold text-gray-900">Create New Sequence</h3>
+              <button onclick="closeModal('createSequenceModal')" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+              </button>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea id="sequenceDescription" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg" 
-                        placeholder="Enter sequence description"></textarea>
-            </div>
-
-            <!-- NUEVO: Configuración de Emails Remitentes -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div class="flex items-start mb-3">
-                <i class="fas fa-envelope-open-text text-blue-500 mt-1 mr-3"></i>
-                <div class="flex-1">
-                  <label class="block text-sm font-medium text-gray-900 mb-1">
-                    Sender Email Rotation
-                  </label>
-                  <p class="text-xs text-gray-600 mb-3">
-                    Add multiple Gmail accounts to rotate sending. Leads will be distributed evenly across all accounts.
-                  </p>
-                </div>
-              </div>
-
-              <div id="senderEmailsContainer" class="space-y-2">
-                <!-- Email principal (ya configurado) -->
-                <div class="sender-email-row flex items-center space-x-2">
-                  <input type="email" 
-                         class="sender-email flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" 
-                         placeholder="ricardokr63@gmail.com" 
-                         value="ricardokr63@gmail.com"
-                         required>
-                  <span class="text-xs text-green-600 font-medium">Primary</span>
-                </div>
-              </div>
-
-              <div class="mt-3 flex items-center justify-between">
-                <button type="button" onclick="addSenderEmail()" 
-                        class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  <i class="fas fa-plus-circle mr-1"></i> Add Another Email
-                </button>
-                <span id="emailCount" class="text-xs text-gray-500">1 email configured</span>
-              </div>
-
-              <!-- Configuración de distribución -->
-              <div class="mt-4 p-3 bg-white rounded border border-gray-200">
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-xs font-medium text-gray-700">Distribution Method</label>
-                  <select id="distributionMethod" class="text-sm px-2 py-1 border border-gray-300 rounded">
-                    <option value="round-robin">Round Robin (Even)</option>
-                    <option value="random">Random</option>
-                    <option value="weighted">Weighted</option>
-                  </select>
+          </div>
+          
+          <div class="p-6">
+            <form id="sequenceForm" onsubmit="submitSequenceForm(event)">
+              <div class="space-y-6">
+                
+                <!-- ========== NOMBRE Y DESCRIPCIÓN ========== -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Sequence Name *
+                    </label>
+                    <input type="text" id="sequenceName" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                           placeholder="Enter sequence name" required>
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Target Leads
+                    </label>
+                    <input type="number" id="targetLeadsCount" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                           placeholder="100" min="1" value="100">
+                  </div>
                 </div>
                 
-                <div class="flex items-center justify-between">
-                  <label class="text-xs font-medium text-gray-700">Daily Limit per Email</label>
-                  <input type="number" id="dailyLimitPerEmail" 
-                         class="w-20 text-sm px-2 py-1 border border-gray-300 rounded text-center" 
-                         value="50" min="1" max="500">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea id="sequenceDescription" rows="3" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                            placeholder="Enter sequence description"></textarea>
+                </div>
+    
+                <!-- ========== SENDER EMAIL ROTATION - NUEVO ========== -->
+                <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-6">
+                  <div class="flex items-start mb-4">
+                    <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-3 shadow-lg">
+                      <i class="fas fa-envelope-open-text text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="text-lg font-bold text-gray-900 mb-1">Sender Email Rotation</h4>
+                      <p class="text-sm text-gray-600">
+                        Select sender accounts to distribute emails evenly and avoid Gmail limits
+                      </p>
+                    </div>
+                    <button type="button" onclick="loadSenderAccounts()" 
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-all shadow-md hover:shadow-lg">
+                      <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                  </div>
+    
+                  <!-- Loading State -->
+                  <div id="senderAccountsLoading" class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-4xl text-purple-600 mb-3"></i>
+                    <p class="text-gray-600 font-medium">Loading sender accounts...</p>
+                  </div>
+    
+                  <!-- Sender Accounts List -->
+                  <div id="senderAccountsList" class="hidden space-y-2">
+                    <!-- Las cuentas se cargarán aquí dinámicamente -->
+                  </div>
+    
+                  <!-- No Accounts State -->
+                  <div id="noSenderAccounts" class="hidden text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                    <i class="fas fa-envelope text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">No sender accounts configured</p>
+                    <p class="text-xs text-gray-500">Check your Railway database</p>
+                  </div>
+    
+                  <!-- Distribution Settings -->
+                  <div id="distributionSettings" class="hidden mt-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <!-- Distribution Method -->
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                          <i class="fas fa-random mr-1 text-purple-600"></i>Distribution Method
+                        </label>
+                        <select id="distributionMethod" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500">
+                          <option value="round-robin">Round Robin (Even)</option>
+                          <option value="random">Random</option>
+                          <option value="weighted">Weighted by Capacity</option>
+                        </select>
+                      </div>
+                      
+                      <!-- Daily Limit -->
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                          <i class="fas fa-gauge mr-1 text-blue-600"></i>Daily Limit per Email
+                        </label>
+                        <input type="number" id="dailyLimitPerEmail" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" 
+                               value="50" min="1" max="500">
+                      </div>
+    
+                      <!-- Send Delay -->
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                          <i class="fas fa-clock mr-1 text-green-600"></i>Delay Between Sends
+                        </label>
+                        <select id="sendDelay" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                          <option value="0">Instant</option>
+                          <option value="30" selected>30 seconds</option>
+                          <option value="60">1 minute</option>
+                          <option value="300">5 minutes</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+    
+                  <!-- Distribution Preview -->
+                  <div id="distributionPreview" class="hidden mt-6 p-4 bg-white rounded-xl border-2 border-purple-200 shadow-sm">
+                    <h5 class="text-sm font-bold text-gray-900 mb-3">
+                      <i class="fas fa-chart-pie mr-2 text-purple-600"></i>Distribution Preview
+                    </h5>
+                    <div id="previewContent" class="space-y-2">
+                      <!-- Preview se generará aquí dinámicamente -->
+                    </div>
+                  </div>
+    
+                  <!-- Summary -->
+                  <div id="accountsSummary" class="hidden mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-700 font-medium">
+                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                        <span id="selectedAccountsCount">0</span> accounts selected
+                      </span>
+                      <span class="font-bold text-purple-600">
+                        <i class="fas fa-bolt mr-1"></i>
+                        <span id="totalCapacity">0</span> emails/day capacity
+                      </span>
+                    </div>
+                  </div>
+                </div>
+    
+                <!-- ========== EMAIL TEMPLATES ========== -->
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <label class="block text-sm font-medium text-gray-700 mb-3">
+                    <i class="fas fa-file-alt mr-2 text-gray-600"></i>Email Templates
+                  </label>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                      <input type="checkbox" id="template_day1" class="mr-3 rounded text-purple-600" checked>
+                      <label for="template_day1" class="text-sm flex-1 cursor-pointer">
+                        <span class="font-medium">Day 1</span> - Introduction
+                      </label>
+                    </div>
+                    <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                      <input type="checkbox" id="template_day3" class="mr-3 rounded text-purple-600" checked>
+                      <label for="template_day3" class="text-sm flex-1 cursor-pointer">
+                        <span class="font-medium">Day 3</span> - Follow up
+                      </label>
+                    </div>
+                    <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                      <input type="checkbox" id="template_day7" class="mr-3 rounded text-purple-600" checked>
+                      <label for="template_day7" class="text-sm flex-1 cursor-pointer">
+                        <span class="font-medium">Day 7</span> - Final Touch
+                      </label>
+                    </div>
+                  </div>
+                </div>
+    
+              </div>
+    
+              <!-- ========== FOOTER BUTTONS ========== -->
+              <div class="mt-8 flex justify-between items-center border-t pt-6">
+                <div class="text-sm text-gray-600">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  <span id="selectedAccountsCount2">0</span> accounts • 
+                  <span id="totalCapacity2">0</span> emails/day
+                </div>
+                <div class="flex space-x-3">
+                  <button type="button" onclick="closeModal('createSequenceModal')" 
+                          class="px-6 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-all">
+                    Cancel
+                  </button>
+                  <button type="submit" id="createSequenceBtn"
+                          class="btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center shadow-lg hover:shadow-xl transition-all">
+                    <i class="fas fa-rocket mr-2"></i>Create Sequence
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <!-- Templates de Email -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Email Templates</label>
-              <div class="space-y-2">
-                <div class="flex items-center">
-                  <input type="checkbox" id="template_day1" class="mr-2 rounded" checked>
-                  <label for="template_day1" class="text-sm">Day 1 - Introduction</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="template_day3" class="mr-2 rounded" checked>
-                  <label for="template_day3" class="text-sm">Day 3 - Follow up</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="template_day7" class="mr-2 rounded" checked>
-                  <label for="template_day7" class="text-sm">Day 7 - Final Touch</label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Preview de distribución -->
-            <div id="distributionPreview" class="hidden">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Distribution Preview</label>
-              <div class="bg-gray-50 rounded-lg p-3">
-                <p class="text-xs text-gray-600 mb-2">Based on your current selection:</p>
-                <div id="previewContent" class="space-y-1"></div>
-              </div>
-            </div>
+            </form>
           </div>
-
-          <div class="mt-6 flex justify-end space-x-3">
-            <button type="button" onclick="closeModal('createSequenceModal')" 
-                    class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg">
-              Create Sequence
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- JavaScript para manejar la rotación de emails -->
-<script>
-let senderEmailCount = 1;
-
-function addSenderEmail() {
-  senderEmailCount++;
-  const container = document.getElementById('senderEmailsContainer');
-  
-  const newRow = document.createElement('div');
-  newRow.className = 'sender-email-row flex items-center space-x-2 animate-fadeIn';
-  newRow.innerHTML = `
-    <input type="email" 
-           class="sender-email flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" 
-           placeholder="email${senderEmailCount}@gmail.com" 
-           required>
-    <input type="password" 
-           class="sender-password flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" 
-           placeholder="App password" 
-           required>
-    <button type="button" onclick="removeSenderEmail(this)" 
-            class="text-red-500 hover:text-red-700">
-      <i class="fas fa-trash text-sm"></i>
-    </button>
-  `;
-  
-  container.appendChild(newRow);
-  updateEmailCount();
-  updateDistributionPreview();
-}
-
-function removeSenderEmail(button) {
-  button.closest('.sender-email-row').remove();
-  senderEmailCount--;
-  updateEmailCount();
-  updateDistributionPreview();
-}
-
-function updateEmailCount() {
-  const count = document.querySelectorAll('.sender-email').length;
-  document.getElementById('emailCount').textContent = `${count} email${count > 1 ? 's' : ''} configured`;
-}
-
-function updateDistributionPreview() {
-  const emailInputs = document.querySelectorAll('.sender-email');
-  const previewDiv = document.getElementById('distributionPreview');
-  const previewContent = document.getElementById('previewContent');
-  
-  if (emailInputs.length > 1) {
-    previewDiv.classList.remove('hidden');
-    const method = document.getElementById('distributionMethod').value;
-    const dailyLimit = document.getElementById('dailyLimitPerEmail').value;
     
-    let previewHTML = '';
-    emailInputs.forEach((input, index) => {
-      const email = input.value || input.placeholder;
-      const percentage = Math.floor(100 / emailInputs.length);
-      previewHTML += `
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-gray-700">${email}</span>
-          <span class="text-gray-500">~${percentage}% (≤${dailyLimit} emails/day)</span>
+    <!-- =====================================================
+         JAVASCRIPT: Lógica del Modal
+         Agregar AL FINAL del archivo, antes de </body>
+         ===================================================== -->
+<!-- =====================================================
+     SCRIPT COMPLETO - SEQUENCES Y SENDER ACCOUNTS
+     Pegar AL FINAL de index.html, ANTES de </body>
+     ===================================================== -->
+
+     <script>
+      // ========== SENDER ACCOUNTS - AUTO LOAD ==========
+      let senderAccounts = [];
+      let selectedAccountIds = [];
+      
+      // Cargar cuentas desde la API
+      async function loadSenderAccounts() {
+          const loadingDiv = document.getElementById('senderAccountsLoading');
+          const listDiv = document.getElementById('senderAccountsList');
+          const noAccountsDiv = document.getElementById('noSenderAccounts');
+          const settingsDiv = document.getElementById('distributionSettings');
+          const summaryDiv = document.getElementById('accountsSummary');
+          
+          // Mostrar loading
+          loadingDiv.classList.remove('hidden');
+          listDiv.classList.add('hidden');
+          noAccountsDiv.classList.add('hidden');
+          settingsDiv.classList.add('hidden');
+          summaryDiv.classList.add('hidden');
+          
+          try {
+              const response = await fetch('/api/sender-accounts');
+              const data = await response.json();
+              
+              if (data.success && data.accounts.length > 0) {
+                  senderAccounts = data.accounts;
+                  renderSenderAccounts(data.accounts);
+                  
+                  // Mostrar lista y settings
+                  loadingDiv.classList.add('hidden');
+                  listDiv.classList.remove('hidden');
+                  settingsDiv.classList.remove('hidden');
+                  summaryDiv.classList.remove('hidden');
+                  
+                  // Auto-seleccionar cuenta primary
+                  const primaryAccount = data.accounts.find(acc => acc.is_primary);
+                  if (primaryAccount) {
+                      selectedAccountIds.push(primaryAccount.id);
+                      renderSenderAccounts(data.accounts);
+                      updateCapacityDisplay();
+                  }
+              } else {
+                  // No hay cuentas
+                  loadingDiv.classList.add('hidden');
+                  noAccountsDiv.classList.remove('hidden');
+              }
+          } catch (error) {
+              console.error('Error loading sender accounts:', error);
+              loadingDiv.classList.add('hidden');
+              showNotification('Error loading sender accounts', 'error');
+          }
+      }
+      
+      // Renderizar lista de cuentas
+      function renderSenderAccounts(accounts) {
+          const listDiv = document.getElementById('senderAccountsList');
+          listDiv.innerHTML = '';
+          
+          accounts.forEach(account => {
+              const remaining = account.daily_limit - account.emails_sent_today;
+              const usagePercent = (account.emails_sent_today / account.daily_limit * 100).toFixed(0);
+              
+              const accountCard = document.createElement('div');
+              accountCard.className = `p-4 bg-white rounded-lg border-2 cursor-pointer transition-all ${
+                  selectedAccountIds.includes(account.id) 
+                      ? 'border-purple-500 bg-purple-50 shadow-md' 
+                      : 'border-gray-200 hover:border-gray-300'
+              }`;
+              accountCard.onclick = () => toggleAccountSelection(account.id);
+              
+              accountCard.innerHTML = `
+                  <div class="flex items-center justify-between">
+                      <div class="flex items-center flex-1">
+                          <input type="checkbox" 
+                                 class="mr-3 rounded text-purple-600 pointer-events-none"
+                                 ${selectedAccountIds.includes(account.id) ? 'checked' : ''}>
+                          <div class="flex-1">
+                              <div class="flex items-center">
+                                  <span class="font-medium text-gray-900">${account.email}</span>
+                                  ${account.is_primary ? 
+                                      '<span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">Primary</span>' 
+                                      : ''}
+                              </div>
+                              <div class="text-xs text-gray-500 mt-1">
+                                  ${account.first_name} ${account.last_name} • ${account.tracking_domain}
+                              </div>
+                          </div>
+                      </div>
+                      <div class="text-right ml-4">
+                          <div class="text-sm font-bold ${remaining > 0 ? 'text-green-600' : 'text-red-600'}">
+                              ${remaining}/${account.daily_limit}
+                          </div>
+                          <div class="text-xs text-gray-500">remaining</div>
+                      </div>
+                  </div>
+                  
+                  <!-- Usage Bar -->
+                  <div class="mt-3">
+                      <div class="w-full bg-gray-200 rounded-full h-2">
+                          <div class="bg-purple-600 h-2 rounded-full transition-all" 
+                               style="width: ${usagePercent}%"></div>
+                      </div>
+                  </div>
+              `;
+              
+              listDiv.appendChild(accountCard);
+          });
+      }
+      
+      // Toggle selección de cuenta
+      function toggleAccountSelection(accountId) {
+          const index = selectedAccountIds.indexOf(accountId);
+          
+          if (index > -1) {
+              selectedAccountIds.splice(index, 1);
+          } else {
+              selectedAccountIds.push(accountId);
+          }
+          
+          renderSenderAccounts(senderAccounts);
+          updateCapacityDisplay();
+          updateDistributionPreview();
+      }
+      
+      // Actualizar display de capacidad
+      function updateCapacityDisplay() {
+          const selectedAccounts = senderAccounts.filter(acc => 
+              selectedAccountIds.includes(acc.id)
+          );
+          
+          const totalCapacity = selectedAccounts.reduce((sum, acc) => 
+              sum + (acc.daily_limit - acc.emails_sent_today), 0
+          );
+          
+          const countElements = document.querySelectorAll('[id^="selectedAccountsCount"]');
+          const capacityElements = document.querySelectorAll('[id^="totalCapacity"]');
+          
+          countElements.forEach(el => el.textContent = selectedAccounts.length);
+          capacityElements.forEach(el => el.textContent = totalCapacity);
+      }
+      
+      // Actualizar preview de distribución
+      function updateDistributionPreview() {
+          const previewDiv = document.getElementById('distributionPreview');
+          const previewContent = document.getElementById('previewContent');
+          
+          if (!previewDiv || !previewContent) return;
+          
+          if (selectedAccountIds.length === 0) {
+              previewDiv.classList.add('hidden');
+              return;
+          }
+          
+          previewDiv.classList.remove('hidden');
+          
+          const selectedAccounts = senderAccounts.filter(acc => 
+              selectedAccountIds.includes(acc.id)
+          );
+          
+          const targetLeads = parseInt(document.getElementById('targetLeadsCount')?.value || 100);
+          const method = document.getElementById('distributionMethod')?.value || 'round-robin';
+          
+          let distribution = [];
+          
+          if (method === 'round-robin') {
+              // Distribución equitativa
+              const perAccount = Math.floor(targetLeads / selectedAccounts.length);
+              const remainder = targetLeads % selectedAccounts.length;
+              
+              distribution = selectedAccounts.map((acc, index) => ({
+                  email: acc.email,
+                  count: perAccount + (index < remainder ? 1 : 0),
+                  remaining: acc.daily_limit - acc.emails_sent_today
+              }));
+          } else if (method === 'weighted') {
+              // Por capacidad
+              const totalCapacity = selectedAccounts.reduce((sum, acc) => 
+                  sum + (acc.daily_limit - acc.emails_sent_today), 0
+              );
+              
+              distribution = selectedAccounts.map(acc => {
+                  const capacity = acc.daily_limit - acc.emails_sent_today;
+                  const proportion = capacity / totalCapacity;
+                  return {
+                      email: acc.email,
+                      count: Math.floor(targetLeads * proportion),
+                      remaining: capacity
+                  };
+              });
+          } else {
+              // Random
+              const perAccount = Math.floor(targetLeads / selectedAccounts.length);
+              distribution = selectedAccounts.map(acc => ({
+                  email: acc.email,
+                  count: perAccount,
+                  remaining: acc.daily_limit - acc.emails_sent_today
+              }));
+          }
+          
+          // Renderizar preview
+          previewContent.innerHTML = distribution.map(d => `
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span class="text-sm text-gray-700 truncate flex-1">${d.email}</span>
+                  <div class="flex items-center space-x-3">
+                      <span class="text-sm font-bold text-purple-600">${d.count} emails</span>
+                      <span class="text-xs text-gray-500">(${d.remaining} available)</span>
+                  </div>
+              </div>
+          `).join('');
+      }
+      
+      // Auto-cargar cuando se abre el modal
+      document.addEventListener('DOMContentLoaded', () => {
+          const modal = document.getElementById('createSequenceModal');
+          if (modal) {
+              const observer = new MutationObserver((mutations) => {
+                  mutations.forEach((mutation) => {
+                      if (modal && !modal.classList.contains('hidden')) {
+                          loadSenderAccounts();
+                      }
+                  });
+              });
+              observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+          }
+          
+          // Listeners para actualizar preview
+          ['distributionMethod', 'targetLeadsCount'].forEach(id => {
+              const element = document.getElementById(id);
+              if (element) {
+                  element.addEventListener('change', updateDistributionPreview);
+                  element.addEventListener('input', updateDistributionPreview);
+              }
+          });
+      });
+      
+      // ========== SEQUENCE ACTIONS ==========
+      
+      // EDIT SEQUENCE
+      function editSequence(sequenceId) {
+          console.log('📝 Editing sequence:', sequenceId);
+          
+          fetch(`/api/sequences/${sequenceId}`)
+              .then(r => r.json())
+              .then(data => {
+                  if (data.success && data.sequence) {
+                      const sequence = data.sequence;
+                      
+                      // Llenar el modal
+                      document.getElementById('sequenceName').value = sequence.name || '';
+                      document.getElementById('sequenceDescription').value = sequence.description || '';
+                      
+                      const targetInput = document.getElementById('targetLeadsCount');
+                      if (targetInput) targetInput.value = sequence.target_leads || 100;
+                      
+                      // Templates
+                      if (document.getElementById('template_day1')) {
+                          document.getElementById('template_day1').checked = true;
+                      }
+                      if (document.getElementById('template_day3')) {
+                          document.getElementById('template_day3').checked = true;
+                      }
+                      if (document.getElementById('template_day7')) {
+                          document.getElementById('template_day7').checked = true;
+                      }
+                      
+                      // Cambiar título
+                      const modalTitle = document.querySelector('#createSequenceModal h3');
+                      if (modalTitle) modalTitle.textContent = 'Edit Sequence';
+                      
+                      // Cambiar botón
+                      const submitBtn = document.getElementById('createSequenceBtn');
+                      if (submitBtn) {
+                          submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Update Sequence';
+                          submitBtn.onclick = (e) => {
+                              e.preventDefault();
+                              updateSequence(sequenceId);
+                          };
+                      }
+                      
+                      // Abrir modal
+                      openModal('createSequenceModal');
+                      loadSenderAccounts();
+                      
+                  } else {
+                      showNotification('Sequence not found', 'error');
+                  }
+              })
+              .catch(error => {
+                  console.error('Error loading sequence:', error);
+                  showNotification('Error loading sequence', 'error');
+              });
+      }
+      
+      // UPDATE SEQUENCE
+      async function updateSequence(sequenceId) {
+          try {
+              const formData = {
+                  name: document.getElementById('sequenceName').value,
+                  description: document.getElementById('sequenceDescription').value,
+                  target_leads: parseInt(document.getElementById('targetLeadsCount')?.value || 100),
+                  sender_account_ids: selectedAccountIds,
+                  distribution_method: document.getElementById('distributionMethod')?.value || 'round-robin',
+                  daily_limit: parseInt(document.getElementById('dailyLimitPerEmail')?.value || 50),
+                  send_delay: parseInt(document.getElementById('sendDelay')?.value || 30)
+              };
+              
+              const response = await fetch(`/api/sequences/${sequenceId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(formData)
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                  showNotification('✅ Sequence updated successfully!', 'success');
+                  closeModal('createSequenceModal');
+                  if (typeof loadSequences === 'function') loadSequences();
+              } else {
+                  showNotification(data.error || 'Error updating sequence', 'error');
+              }
+          } catch (error) {
+              console.error('Error updating sequence:', error);
+              showNotification('Error updating sequence', 'error');
+          }
+      }
+      
+      // ADD PROSPECTS TO SEQUENCE
+      function addProspectsToSequence(sequenceId) {
+          console.log('➕ Adding prospects to sequence:', sequenceId);
+          openProspectSelectionModal(sequenceId);
+      }
+      
+      // PROSPECT SELECTION MODAL
+      let selectedProspectIds = [];
+      
+      function openProspectSelectionModal(sequenceId) {
+          let modal = document.getElementById('prospectSelectionModal');
+          
+          if (!modal) {
+              modal = document.createElement('div');
+              modal.id = 'prospectSelectionModal';
+              modal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden z-50';
+              modal.innerHTML = `
+                  <div class="flex items-center justify-center min-h-screen p-4">
+                      <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                          <div class="p-6 border-b border-gray-200">
+                              <div class="flex items-center justify-between">
+                                  <h3 class="text-xl font-bold text-gray-900">
+                                      <i class="fas fa-user-plus mr-2 text-purple-600"></i>
+                                      Add Prospects to Sequence
+                                  </h3>
+                                  <button onclick="closeProspectModal()" class="text-gray-400 hover:text-gray-600">
+                                      <i class="fas fa-times text-xl"></i>
+                                  </button>
+                              </div>
+                          </div>
+                          
+                          <div class="p-6">
+                              <!-- Search -->
+                              <div class="mb-4 flex items-center space-x-4">
+                                  <input type="text" id="prospectSearchInput" 
+                                         placeholder="Search prospects by name, email, or company..." 
+                                         class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                  <button onclick="searchProspects()" 
+                                          class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                                      <i class="fas fa-search mr-2"></i>Search
+                                  </button>
+                              </div>
+                              
+                              <!-- Prospects List -->
+                              <div id="prospectsList" class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
+                                  <div class="text-center py-8 text-gray-500">
+                                      <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+                                      <p>Loading prospects...</p>
+                                  </div>
+                              </div>
+                              
+                              <!-- Footer -->
+                              <div class="mt-6 flex justify-between items-center border-t pt-4">
+                                  <div class="text-sm text-gray-700 font-medium">
+                                      <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                                      <span id="selectedProspectsCount">0</span> prospects selected
+                                  </div>
+                                  <div class="flex space-x-3">
+                                      <button onclick="closeProspectModal()" 
+                                              class="px-6 py-2 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all">
+                                          Cancel
+                                      </button>
+                                      <button onclick="confirmAddProspects('${sequenceId}')" 
+                                              class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md">
+                                          <i class="fas fa-plus mr-2"></i>Add Selected
+                                      </button>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              `;
+              document.body.appendChild(modal);
+          }
+          
+          modal.classList.remove('hidden');
+          selectedProspectIds = [];
+          loadProspectsForSelection();
+      }
+      
+      // LOAD PROSPECTS FOR SELECTION
+      async function loadProspectsForSelection() {
+    const listDiv = document.getElementById('prospectsList');
+    
+    console.log('🔍 Loading prospects for selection...');
+    
+    listDiv.innerHTML = `
+        <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+            <p>Loading prospects...</p>
         </div>
-      `;
-    });
+    `;
     
-    previewContent.innerHTML = previewHTML;
-  } else {
-    previewDiv.classList.add('hidden');
-  }
+    try {
+        // Cargar de /api/leads
+        let response = await fetch('/api/leads?limit=50');
+        let data = await response.json();
+        
+        console.log('📊 RAW API Response:', JSON.stringify(data).substring(0, 200));
+        
+        // Extraer leads del response - TODAS las variantes posibles
+        let leads = [];
+        
+        if (data.success === true && Array.isArray(data.leads)) {
+            leads = data.leads;
+        } else if (data.success === true && Array.isArray(data.prospects)) {
+            leads = data.prospects;
+        } else if (data.success === true && Array.isArray(data.data)) {
+            leads = data.data;
+        } else if (Array.isArray(data)) {
+            leads = data;
+        } else if (data.leads && Array.isArray(data.leads)) {
+            leads = data.leads;
+        } else if (data.prospects && Array.isArray(data.prospects)) {
+            leads = data.prospects;
+        }
+        
+        console.log(`✅ Extracted ${leads.length} leads/prospects`);
+        
+        if (leads.length > 0) {
+            // Renderizar prospects
+            listDiv.innerHTML = leads.map(prospect => {
+                const name = prospect.name || prospect.full_name || 'No name';
+                const email = prospect.email || 'No email';
+                const company = prospect.company || '';
+                const title = prospect.title || prospect.job_title || '';
+                
+                return `
+                    <div class="prospect-item flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-all"
+                         onclick="toggleProspectSelection(${prospect.id}, this)"
+                         data-prospect-id="${prospect.id}">
+                        <input type="checkbox" class="prospect-checkbox mr-3 rounded text-purple-600 pointer-events-none" 
+                               data-prospect-id="${prospect.id}">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${name}</div>
+                            <div class="text-sm text-gray-500">
+                                ${email} ${company ? '• ' + company : ''}
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            ${title || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            console.log('✅ Prospects rendered successfully');
+            
+        } else {
+            listDiv.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-3"></i>
+                    <p class="font-medium">No prospects available</p>
+                    <p class="text-xs mt-2">API returned: ${JSON.stringify(data).substring(0, 100)}</p>
+                </div>
+            `;
+            console.log('⚠️ No prospects found. Data:', data);
+        }
+    } catch (error) {
+        console.error('❌ Error loading prospects:', error);
+        listDiv.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
+                <p class="font-medium">Error loading prospects</p>
+                <p class="text-xs mt-2">${error.message}</p>
+            </div>
+        `;
+    }
+}
+// ========== FIX 2: SEARCH PROSPECTS ==========
+// BUSCAR esta función y REEMPLAZARLA:
+
+async function searchProspects() {
+    const searchTerm = document.getElementById('prospectSearchInput').value;
+    const listDiv = document.getElementById('prospectsList');
+    
+    console.log('🔍 Searching prospects with term:', searchTerm);
+    
+    listDiv.innerHTML = `
+        <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+            <p>Searching...</p>
+        </div>
+    `;
+    
+    try {
+        // Cargar todos los leads
+        const response = await fetch('/api/leads?limit=100');
+        const data = await response.json();
+        
+        let leads = [];
+        if (data.success && data.leads) {
+            leads = data.leads;
+        } else if (data.success && data.prospects) {
+            leads = data.prospects;
+        } else if (Array.isArray(data)) {
+            leads = data;
+        }
+        
+        console.log(`📊 Total leads: ${leads.length}`);
+        
+        // Filtrar localmente por término de búsqueda
+        if (searchTerm && searchTerm.trim() !== '') {
+            const term = searchTerm.toLowerCase().trim();
+            leads = leads.filter(lead => {
+                const name = (lead.name || lead.full_name || '').toLowerCase();
+                const email = (lead.email || '').toLowerCase();
+                const company = (lead.company || '').toLowerCase();
+                const title = (lead.title || lead.job_title || '').toLowerCase();
+                
+                return name.includes(term) || 
+                       email.includes(term) || 
+                       company.includes(term) || 
+                       title.includes(term);
+            });
+            
+            console.log(`🔍 Filtered to ${leads.length} results for "${searchTerm}"`);
+        }
+        
+        if (leads.length > 0) {
+            listDiv.innerHTML = leads.map(prospect => {
+                const name = prospect.name || prospect.full_name || 'N/A';
+                const email = prospect.email || 'No email';
+                const company = prospect.company || '';
+                const title = prospect.title || prospect.job_title || '';
+                
+                return `
+                    <div class="prospect-item flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-all"
+                         onclick="toggleProspectSelection(${prospect.id}, this)"
+                         data-prospect-id="${prospect.id}">
+                        <input type="checkbox" class="prospect-checkbox mr-3 rounded text-purple-600 pointer-events-none" 
+                               data-prospect-id="${prospect.id}">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${name}</div>
+                            <div class="text-sm text-gray-500">
+                                ${email} ${company ? '• ' + company : ''}
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            ${title || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            console.log(`✅ Rendered ${leads.length} prospects`);
+        } else {
+            listDiv.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-4xl mb-3"></i>
+                    <p class="font-medium">No results found${searchTerm ? ' for "' + searchTerm + '"' : ''}</p>
+                    <p class="text-xs mt-2">Try a different search term</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('❌ Error searching:', error);
+        listDiv.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
+                <p class="font-medium">Error searching prospects</p>
+                <p class="text-xs mt-2">${error.message}</p>
+            </div>
+        `;
+    }
 }
 
-// Actualizar preview cuando cambian los valores
-document.getElementById('distributionMethod')?.addEventListener('change', updateDistributionPreview);
-document.getElementById('dailyLimitPerEmail')?.addEventListener('input', updateDistributionPreview);
+// ========== FIX 3: SHOW SEQUENCE ACTIONS ==========
+// AGREGAR esta función (si no existe):
 
-// Modificar la función submitSequenceForm para incluir los emails
-async function submitSequenceForm(event) {
-  event.preventDefault();
-  
-  const senderEmails = [];
-  document.querySelectorAll('.sender-email-row').forEach(row => {
-    const email = row.querySelector('.sender-email').value;
-    const password = row.querySelector('.sender-password')?.value || process.env.GMAIL_APP_PASSWORD;
-    if (email) {
-      senderEmails.push({ email, password });
-    }
-  });
-  
-  const sequenceData = {
-    name: document.getElementById('sequenceName').value,
-    description: document.getElementById('sequenceDescription').value,
-    sender_emails: senderEmails,
-    distribution_method: document.getElementById('distributionMethod').value,
-    daily_limit_per_email: parseInt(document.getElementById('dailyLimitPerEmail').value),
-    templates: {
-      day_1: document.getElementById('template_day1').checked,
-      day_3: document.getElementById('template_day3').checked,
-      day_7: document.getElementById('template_day7').checked
-    }
-  };
-  
-  try {
-    showNotification('Creating sequence with email rotation...', 'info');
+function showSequenceActions(sequenceId, event) {
+    console.log('🎯 showSequenceActions called for:', sequenceId);
     
-    const response = await fetch('/api/sequences', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sequenceData)
+    // Obtener el botón desde el event si buttonElement no existe
+    const buttonElement = event && event.target ? event.target : event;
+    
+    if (!buttonElement) {
+        console.error('❌ No button element found');
+        return;
+    }
+    
+    // Cerrar dropdowns existentes
+    document.querySelectorAll('.sequence-actions-dropdown').forEach(dropdown => {
+        dropdown.remove();
     });
     
-    const data = await response.json();
+    // Crear dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'sequence-actions-dropdown absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-2xl border border-gray-200 z-50';
+    dropdown.style.cssText = 'position: absolute; right: 0; top: 100%; margin-top: 8px;';
     
-    if (data.success) {
-      showNotification(`Sequence created with ${senderEmails.length} sender email(s)!`, 'success');
-      closeModal('createSequenceModal');
-      loadSequences(); // Recargar lista de secuencias
+    dropdown.innerHTML = `
+        <div class="py-2">
+            <button onclick="editSequence('${sequenceId}'); event.stopPropagation();" 
+                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 flex items-center transition-colors">
+                <i class="fas fa-edit mr-3 text-blue-600 w-4"></i>
+                <span class="font-medium">Edit Sequence</span>
+            </button>
+            
+            <button onclick="addProspectsToSequence('${sequenceId}'); event.stopPropagation();" 
+                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 flex items-center transition-colors">
+                <i class="fas fa-user-plus mr-3 text-green-600 w-4"></i>
+                <span class="font-medium">Add Prospects</span>
+            </button>
+            
+            <button onclick="viewSequenceDetails('${sequenceId}'); event.stopPropagation();" 
+                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 flex items-center transition-colors">
+                <i class="fas fa-chart-bar mr-3 text-purple-600 w-4"></i>
+                <span class="font-medium">View Analytics</span>
+            </button>
+            
+            <div class="border-t border-gray-200 my-2"></div>
+            
+            <button onclick="activateSequence('${sequenceId}'); event.stopPropagation();" 
+                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 flex items-center transition-colors">
+                <i class="fas fa-play mr-3 text-green-600 w-4"></i>
+                <span class="font-medium">Activate</span>
+            </button>
+            
+            <button onclick="pauseSequence('${sequenceId}'); event.stopPropagation();" 
+                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 flex items-center transition-colors">
+                <i class="fas fa-pause mr-3 text-orange-600 w-4"></i>
+                <span class="font-medium">Pause</span>
+            </button>
+            
+            <div class="border-t border-gray-200 my-2"></div>
+            
+            <button onclick="deleteSequence('${sequenceId}'); event.stopPropagation();" 
+                    class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors">
+                <i class="fas fa-trash mr-3 w-4"></i>
+                <span class="font-medium">Delete Sequence</span>
+            </button>
+        </div>
+    `;
+    
+    // Buscar el parent cell o container
+    let parentCell = buttonElement.closest('td');
+    
+    if (!parentCell) {
+        parentCell = buttonElement.closest('.actions-cell');
+    }
+    
+    if (!parentCell) {
+        parentCell = buttonElement.parentElement;
+    }
+    
+    if (parentCell) {
+        parentCell.style.position = 'relative';
+        parentCell.appendChild(dropdown);
+        console.log('✅ Dropdown appended to parent');
     } else {
-      showNotification(data.error || 'Error creating sequence', 'error');
+        // Fallback: agregar al body con posicionamiento fijo
+        const rect = buttonElement.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.left = (rect.right - 224) + 'px';
+        dropdown.style.top = (rect.bottom + 8) + 'px';
+        document.body.appendChild(dropdown);
+        console.log('✅ Dropdown appended to body');
     }
-  } catch (error) {
-    console.error('Error:', error);
-    showNotification('Error creating sequence', 'error');
-  }
-}
-</script>
-
-<style>
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-in;
+    
+    // Prevenir cierre al hacer click en el dropdown
+    dropdown.onclick = (e) => e.stopPropagation();
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-</style>
+// Cerrar dropdowns al hacer click fuera
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('[onclick*="showSequenceActions"]') && 
+        !event.target.closest('.sequence-actions-dropdown')) {
+        document.querySelectorAll('.sequence-actions-dropdown').forEach(d => d.remove());
+    }
+});
 
-  <!-- Add to Sequence Modal -->
-  <div id="addToSequenceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg max-w-md w-full">
-        <div class="p-6 border-b border-gray-200">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-gray-900">Add to Sequence</h3>
-            <button onclick="closeModal('addToSequenceModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-          </div>
-        </div>
-        <div class="p-6">
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Select Sequence</label>
-            <select id="sequenceSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-              <option value="">Choose a sequence...</option>
-            </select>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button onclick="closeModal('addToSequenceModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button onclick="confirmAddToSequence()" class="btn-primary text-white px-4 py-2 rounded-lg">Add to Sequence</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+console.log('✅ Fixed prospect and action functions loaded');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      // TOGGLE PROSPECT SELECTION
+      function toggleProspectSelection(prospectId, element) {
+          const checkbox = element.querySelector('.prospect-checkbox');
+          checkbox.checked = !checkbox.checked;
+          
+          if (checkbox.checked) {
+              selectedProspectIds.push(prospectId);
+              element.classList.add('bg-purple-50', 'border-purple-500');
+          } else {
+              selectedProspectIds = selectedProspectIds.filter(id => id !== prospectId);
+              element.classList.remove('bg-purple-50', 'border-purple-500');
+          }
+          
+          document.getElementById('selectedProspectsCount').textContent = selectedProspectIds.length;
+      }
+      
+      // CONFIRM ADD PROSPECTS
+      async function confirmAddProspects(sequenceId) {
+          if (selectedProspectIds.length === 0) {
+              showNotification('⚠️ Please select at least one prospect', 'warning');
+              return;
+          }
+          
+          try {
+              const response = await fetch(`/api/sequences/${sequenceId}/prospects`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                      prospect_ids: selectedProspectIds,
+                      lead_ids: selectedProspectIds 
+                  })
+              });
+              
+              const data = await response.json();
+              
+              if (data.success) {
+                  showNotification(`✅ Added ${selectedProspectIds.length} prospects to sequence!`, 'success');
+                  closeProspectModal();
+                  if (typeof loadSequences === 'function') loadSequences();
+              } else {
+                  showNotification(data.error || 'Error adding prospects', 'error');
+              }
+          } catch (error) {
+              console.error('Error adding prospects:', error);
+              showNotification('Error adding prospects', 'error');
+          }
+      }
+      
+      // CLOSE PROSPECT MODAL
+      function closeProspectModal() {
+          const modal = document.getElementById('prospectSelectionModal');
+          if (modal) {
+              modal.classList.add('hidden');
+              selectedProspectIds = [];
+          }
+      }
+      
+      // DELETE SEQUENCE
+      function deleteSequence(sequenceId) {
+          if (!confirm('⚠️ Are you sure you want to delete this sequence? This action cannot be undone.')) {
+              return;
+          }
+          
+          fetch(`/api/sequences/${sequenceId}`, {
+              method: 'DELETE'
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  showNotification('✅ Sequence deleted successfully', 'success');
+                  if (typeof loadSequences === 'function') loadSequences();
+              } else {
+                  showNotification('Error deleting sequence', 'error');
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              showNotification('Error deleting sequence', 'error');
+          });
+      }
+      
+      // ACTIVATE SEQUENCE
+      function activateSequence(sequenceId) {
+          if (!confirm('🚀 Activate this sequence? Emails will be scheduled for sending.')) {
+              return;
+          }
+          
+          fetch(`/api/sequences/${sequenceId}/activate`, {
+              method: 'POST'
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  showNotification('✅ Sequence activated successfully!', 'success');
+                  if (typeof loadSequences === 'function') loadSequences();
+              } else {
+                  showNotification(data.error || 'Error activating sequence', 'error');
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              showNotification('Error activating sequence', 'error');
+          });
+      }
+      
+      // PAUSE SEQUENCE
+      function pauseSequence(sequenceId) {
+          fetch(`/api/sequences/${sequenceId}/pause`, {
+              method: 'POST'
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (data.success) {
+                  showNotification('⏸️ Sequence paused', 'success');
+                  if (typeof loadSequences === 'function') loadSequences();
+              } else {
+                  showNotification('Error pausing sequence', 'error');
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              showNotification('Error pausing sequence', 'error');
+          });
+      }
+      
+      // VIEW SEQUENCE DETAILS
+      function viewSequenceDetails(sequenceId) {
+          console.log('👁️ Viewing sequence details:', sequenceId);
+          // TODO: Implementar modal de detalles
+          showNotification('📊 Sequence details coming soon!', 'info');
+      }
+      
+      console.log('✅ Sequence management system loaded');
+      console.log('📧 Sender accounts: ' + (senderAccounts.length || 0));
+      console.log('🎯 Actions: edit, delete, activate, pause, addProspects');
+      </script>
+    
+    <style>
+    /* Animación para las cards */
+    .sender-account-card {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    </style>
+
+
 
   <!-- Add Prospect Modal -->
   <div id="addProspectModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
@@ -3776,7 +5105,7 @@ async function submitSequenceForm(event) {
                   <option value="">Select Industry</option>
                   <option value="Technology">Technology</option>
                   <option value="Manufacturing">Manufacturing</option>
-                  <option value="Construction">Construction</option>
+                  <option value="construction">construction</option>
                   <option value="Healthcare">Healthcare</option>
                   <option value="Legal Services">Legal Services</option>
                 </select>
@@ -5324,8 +6653,19 @@ function loadSectionData(sectionName) {
       if (modal) modal.classList.add('hidden');
     }
 
-    // ===== Prospects Management =====
-    async function loadProspects() {
+// =====================================================
+// SNIPPET: loadProspects con check de lastBatchActive
+// Reemplazar TODA la función loadProspects en index.html
+// Línea ~6657
+// =====================================================
+
+async function loadProspects() {
+    // ⭐ No cargar si Last Pull está activo
+    if (typeof lastBatchActive !== 'undefined' && lastBatchActive === true) {
+        console.log('⏸️ loadProspects skipped - Last Pull is active');
+        return;
+    }
+    
     try {
         showLoading('prospects');
         
@@ -5362,7 +6702,6 @@ function loadSectionData(sectionName) {
         hideLoading('prospects');
     }
 }
-
     function updateProspectsTable() {
     const tbody = document.getElementById('prospectsTableBody');
     if (!tbody) return;
@@ -5561,8 +6900,8 @@ function loadSectionData(sectionName) {
               <button onclick="addProspectsToSequence('${sequence.id}')" class="text-green-600 hover:text-green-800" title="Add Prospects">
                 <i class="fas fa-user-plus"></i>
               </button>
-              <button onclick="showSequenceActions('${sequence.id}')" class="text-gray-400 hover:text-gray-600" title="More">
-                <i class="fas fa-ellipsis-v"></i>
+              <button onclick="showSequenceActions('${sequence.id}', this)" class="text-gray-400 hover:text-gray-600" title="More">
+                                <i class="fas fa-ellipsis-v"></i>
               </button>
             </div>
           </td>
@@ -8614,6 +9953,442 @@ function viewLinkedInEnrichedDetails(prospectId) {
     
     document.body.appendChild(modal);
 }
+
+
+
+
+// ScraperCity Cost Tracker
+const ScraperCityCostTracker = {
+    async init() {
+        await this.loadStats();
+        await this.loadRecentScrapes();
+        this.initChart();
+        setInterval(() => { this.loadStats(); }, 30000);
+    },
+    
+    async loadStats() {
+        try {
+            const r = await fetch('/api/scrapercity/stats');
+            const d = await r.json();
+            if (d.success) {
+                document.getElementById('scraperCityTotal').textContent = d.totalCost.toFixed(2);
+                document.getElementById('totalLeadsScraped').textContent = d.totalLeads;
+                document.getElementById('todaySpend').textContent = d.todaySpend.toFixed(2);
+                document.getElementById('weekSpend').textContent = d.weekSpend.toFixed(2);
+                document.getElementById('monthSpend').textContent = d.monthSpend.toFixed(2);
+                document.getElementById('avgPerRun').textContent = d.avgPerRun.toFixed(2);
+            }
+        } catch (e) { console.error(e); }
+    },
+    
+    async loadRecentScrapes() {
+        try {
+            const r = await fetch('/api/scrapercity/recent');
+            const d = await r.json();
+            const tbody = document.getElementById('scraperCityRecentTable');
+            tbody.innerHTML = '';
+            
+            if (d.scrapes && d.scrapes.length > 0) {
+                d.scrapes.forEach(s => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="px-4 py-2">${new Date(s.created_at).toLocaleDateString()}</td>
+                            <td class="px-4 py-2">${s.search_query || 'N/A'}</td>
+                            <td class="px-4 py-2">${s.leads_count}</td>
+                            <td class="px-4 py-2">$${s.total_cost.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No data yet</td></tr>';
+            }
+        } catch (e) { console.error(e); }
+    },
+    
+    initChart() {
+        const ctx = document.getElementById('scraperCityCostChart');
+        if (!ctx) return;
+        
+        fetch('/api/scrapercity/trend').then(r => r.json()).then(d => {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: d.dates,
+                    datasets: [{
+                        label: 'Daily Cost ($)',
+                        data: d.costs,
+                        borderColor: 'rgb(147, 51, 234)',
+                        backgroundColor: 'rgba(147, 51, 234, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        });
+    }
+};
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('scraperCityTotal')) {
+        ScraperCityCostTracker.init();
+    }
+});
+
+
+
+
+// ============================================
+// PEGAR AL FINAL DE TU JAVASCRIPT
+// ============================================
+
+// =====================================================
+// FUNCIÓN MEJORADA: filterLastBatch
+// Reemplazar en index.html - usa endpoints existentes
+// =====================================================
+
+// Variables globales (ya existen en tu código)
+// =====================================================
+// FUNCIÓN ROBUSTA: filterLastBatch
+// Fix para elementos null y leads sin scraper_run_id
+// =====================================================
+
+let lastBatchActive = false;
+let lastBatchLeads = [];
+
+async function filterLastBatch() {
+    try {
+        const btn = document.getElementById('lastScraperPull');
+        if (!btn) {
+            console.error('❌ Button lastScraperPull not found');
+            return;
+        }
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+        btn.disabled = true;
+        
+        console.log('🔄 Loading last batch...');
+        
+        let prospects = [];
+        let batchInfo = {};
+        
+        // PASO 1: Intentar obtener del último scraper run
+        try {
+            const scraperResponse = await fetch('/api/scrapercity/last-run');
+            const scraperData = await scraperResponse.json();
+            
+            if (scraperData.success && scraperData.run) {
+                const runId = scraperData.run.run_id;
+                console.log(`✅ Found last run: ${runId} with ${scraperData.total_leads} leads`);
+                
+                // Obtener todos los leads
+                const leadsResponse = await fetch('/api/leads?limit=500');
+                const leadsData = await leadsResponse.json();
+                
+                let allLeads = leadsData.success && leadsData.leads ? leadsData.leads : 
+                              Array.isArray(leadsData) ? leadsData : [];
+                
+                // Filtrar por scraper_run_id
+                prospects = allLeads.filter(lead => lead.scraper_run_id === runId);
+                
+                console.log(`📊 Found ${prospects.length} leads with scraper_run_id=${runId}`);
+                
+                // Si no encontró leads por run_id, intentar por fecha
+                if (prospects.length === 0) {
+                    console.log('⚠️ No leads with scraper_run_id, trying by date...');
+                    
+                    const runDate = new Date(scraperData.run.created_at);
+                    const runDateEnd = new Date(runDate);
+                    runDateEnd.setMinutes(runDateEnd.getMinutes() + 30); // 30 min window
+                    
+                    prospects = allLeads.filter(lead => {
+                        if (!lead.created_at) return false;
+                        const leadDate = new Date(lead.created_at);
+                        return leadDate >= runDate && leadDate <= runDateEnd;
+                    });
+                    
+                    console.log(`📊 Found ${prospects.length} leads by date range`);
+                }
+                
+                batchInfo = {
+                    source: 'scraper_run',
+                    run_id: runId,
+                    date: scraperData.run.created_at,
+                    query: scraperData.run.search_query
+                };
+            }
+        } catch (error) {
+            console.warn('⚠️ Error fetching scraper run:', error);
+        }
+        
+        // PASO 2: Si no hay prospects aún, usar leads recientes
+        if (prospects.length === 0) {
+            console.log('⚠️ Using recent leads fallback (last 24h)');
+            
+            const leadsResponse = await fetch('/api/leads?limit=100&sort=created_at&order=desc');
+            const leadsData = await leadsResponse.json();
+            
+            let allLeads = leadsData.success && leadsData.leads ? leadsData.leads : 
+                          Array.isArray(leadsData) ? leadsData : [];
+            
+            // Filtrar por últimas 24 horas
+            const yesterday = new Date();
+            yesterday.setHours(yesterday.getHours() - 24);
+            
+            prospects = allLeads.filter(lead => {
+                return lead.created_at && new Date(lead.created_at) > yesterday;
+            });
+            
+            console.log(`✅ Found ${prospects.length} recent leads (24h)`);
+            
+            batchInfo = {
+                source: 'recent_24h',
+                date: new Date().toISOString()
+            };
+        }
+        
+        // PASO 3: Mostrar resultados
+        if (prospects.length > 0) {
+            lastBatchActive = true;
+            lastBatchLeads = prospects;
+            
+            // Actualizar alerta si existe
+            const alert = document.getElementById('lastBatchAlert');
+            if (alert) {
+                alert.classList.remove('hidden');
+                const countSpan = document.getElementById('batchLeadsCount');
+                if (countSpan) countSpan.textContent = prospects.length;
+            }
+            
+            // Actualizar tabla
+            displayBatchLeads(prospects);
+            
+            // Mensaje de éxito
+            const message = batchInfo.source === 'scraper_run' 
+                ? `✅ Showing ${prospects.length} leads from ${batchInfo.query || 'last extraction'}`
+                : `✅ Showing ${prospects.length} leads from last 24 hours`;
+            
+            showNotification(message, 'success');
+        } else {
+            showNotification('No recent extractions found', 'info');
+        }
+        
+        // PASO 4: Restaurar botón de forma segura
+        const countSpan = btn.querySelector('#lastPullCount');
+        if (countSpan) {
+            countSpan.textContent = prospects.length;
+        }
+        
+        btn.innerHTML = `
+            <i class="fas fa-clock-rotate-left"></i>
+            <span>Last Pull</span>
+            <span id="lastPullCount" class="bg-white bg-opacity-30 px-2 py-1 rounded-full text-xs font-bold">${prospects.length}</span>
+        `;
+        btn.disabled = false;
+        
+        console.log(`✅ Filter complete: ${prospects.length} leads displayed`);
+        
+    } catch (error) {
+        console.error('❌ Error loading last batch:', error);
+        showNotification('Error loading last batch', 'error');
+        
+        // Restaurar botón de forma segura
+        const btn = document.getElementById('lastScraperPull');
+        if (btn) {
+            btn.innerHTML = `
+                <i class="fas fa-clock-rotate-left"></i>
+                <span>Last Pull</span>
+                <span id="lastPullCount" class="bg-white bg-opacity-30 px-2 py-1 rounded-full text-xs font-bold">0</span>
+            `;
+            btn.disabled = false;
+        }
+    }
+}
+
+// Función para mostrar leads del batch
+function displayBatchLeads(leads) {
+    const tbody = document.querySelector('#prospectsTableBody') || 
+                  document.querySelector('#prospects-section tbody') || 
+                  document.querySelector('tbody');
+    
+    if (!tbody) {
+        console.error('❌ No tbody found. Tried: #prospectsTableBody, #prospects-section tbody, tbody');
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    if (leads.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-3 block"></i>
+                    <p class="font-medium">No leads in this batch</p>
+                    <p class="text-sm mt-2">Try adjusting your filters</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    console.log(`📊 Rendering ${leads.length} leads in table`);
+    
+    leads.forEach(lead => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-purple-50 border-l-4 border-purple-500 transition-colors';
+        row.innerHTML = `
+            <td class="px-4 py-3">
+                <input type="checkbox" class="batch-checkbox rounded text-purple-600" data-lead-id="${lead.id}">
+            </td>
+            <td class="px-4 py-3">
+                <div>
+                    <div class="font-medium text-gray-900">${lead.name || lead.full_name || 'N/A'}</div>
+                    <div class="text-sm text-gray-500">${lead.email || 'No email'}</div>
+                </div>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-700">${lead.title || lead.job_title || 'N/A'}</td>
+            <td class="px-4 py-3 text-sm text-gray-700">${lead.company || 'N/A'}</td>
+            <td class="px-4 py-3">
+                <span class="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium">
+                    ${lead.industry || 'Unknown'}
+                </span>
+            </td>
+            <td class="px-4 py-3">
+                <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    <i class="fas fa-star mr-1"></i>New
+                </span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500">
+                ${formatDate(lead.created_at)}
+            </td>
+            <td class="px-4 py-3">
+                <span class="px-2 py-1 ${getScoreColor(lead.lead_score)} rounded-full text-xs font-bold">
+                  ${lead.score || 0}                </span>
+            </td>
+            <td class="px-4 py-3">
+                <button onclick="viewLeadDetails(${lead.id})" class="text-purple-600 hover:text-purple-800">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    console.log(`✅ Displayed ${leads.length} batch leads`);
+}
+
+// Helper: formatear fecha
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid date';
+        
+        const now = new Date();
+        const diff = now - date;
+        
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        
+        return date.toLocaleDateString();
+    } catch (error) {
+        return 'Unknown';
+    }
+}
+
+// Helper: color del score
+function getScoreColor(score) {
+    if (!score) return 'bg-gray-100 text-gray-600';
+    if (score >= 80) return 'bg-green-100 text-green-700';
+    if (score >= 60) return 'bg-blue-100 text-blue-700';
+    if (score >= 40) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-red-100 text-red-700';
+}
+
+// Seleccionar todos
+function selectAllBatch() {
+    const checkboxes = document.querySelectorAll('.batch-checkbox');
+    if (checkboxes.length === 0) {
+        showNotification('No leads to select', 'warning');
+        return;
+    }
+    
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+    });
+    
+    const count = Array.from(checkboxes).filter(cb => cb.checked).length;
+    showNotification(`${count} leads ${allChecked ? 'deselected' : 'selected'}`, 'info');
+}
+
+// Limpiar filtro
+function clearBatchFilter() {
+    const alert = document.getElementById('lastBatchAlert');
+    if (alert) alert.classList.add('hidden');
+    
+    lastBatchActive = false;
+    lastBatchLeads = [];
+    
+    // Recargar todos los prospects
+    if (typeof loadProspects === 'function') {
+        loadProspects();
+    } else {
+        console.warn('⚠️ loadProspects function not found');
+        window.location.reload();
+    }
+    
+    showNotification('Filter cleared', 'info');
+}
+
+console.log('✅ Last Pull functions loaded (robust version)');
+// Agregar seleccionados a secuencia
+async function addSelectedToSequence() {
+    const checked = document.querySelectorAll('.batch-checkbox:checked');
+    const leadIds = Array.from(checked).map(cb => cb.dataset.leadId);
+    
+    if (leadIds.length === 0) {
+        showNotification('Select at least one lead', 'warning');
+        return;
+    }
+    
+    const sequenceName = prompt(`Add ${leadIds.length} leads to sequence:`, 'Cold Outreach');
+    
+    if (sequenceName) {
+        const response = await fetch('/api/sequences/add-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_ids: leadIds, sequence_name: sequenceName })
+        });
+        
+        if (response.ok) {
+            showNotification(`Added ${leadIds.length} leads to ${sequenceName}`, 'success');
+        }
+    }
+}
+
+// Check for new batch on page load
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('lastScraperPull')) {
+        fetch('/api/scrapercity/last-run')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.total_leads) {
+                    document.getElementById('lastPullCount').textContent = data.total_leads;
+                }
+            });
+    }
+});
+
 
 
 

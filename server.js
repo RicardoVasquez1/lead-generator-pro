@@ -46,20 +46,20 @@ app.use(express.static(__dirname));
 // =====================
 
 const PRIORITY_INDUSTRIES = [
-    'Manufacturing', 'Construction', 'Logistics & Supply Chain', 'Industrial Services', 'Waste Management',
-    'HVAC', 'Electrical Services', 'Plumbing', 'Facility Maintenance', 'Auto Repair', 'Fleet Services',
-    'Accounting & Bookkeeping', 'Legal Services', 'Insurance Agencies', 'Management Consulting', 
-    'HR & Staffing Firms', 'Compliance Services', 'Pest Control', 'Landscaping', 
-    'Janitorial & Cleaning Services', 'Roofing & Exterior Maintenance', 'Security Companies',
-    'Distribution & Wholesale', 'Wholesale Trade', 'Import/Export', 'Packaging & Fulfillment',
-    'Dental Practices', 'Physical Therapy', 'Chiropractors', 'Private Clinics', 
-    'Home Healthcare', 'Behavioral Health Services', 'Vocational Schools', 
-    'Online Training Providers', 'Corporate Training Companies', 'Driving Schools', 
-    'Private K-12 Institutions', 'Print Services', 'Office Equipment Suppliers', 
-    'Safety Equipment Providers', 'Commercial Furniture', 'Signage & Displays',
-    'Commercial Property Management', 'Real Estate Investment Groups', 'Construction Project Management',
-    'Architectural Services', 'Building Inspection Services', 'Outsourced Customer Support',
-    'Technical Support Providers', 'BPO Firms'
+    'manufacturing', 'construction', 'logistics & supply chain', 'industrial services', 'waste management',
+    'hvac', 'electrical services', 'plumbing', 'facility maintenance', 'auto repair', 'fleet services',
+    'accounting & bookkeeping', 'legal services', 'insurance agencies', 'management consulting', 
+    'hr & staffing firms', 'compliance services', 'pest control', 'landscaping', 
+    'janitorial & cleaning services', 'roofing & exterior maintenance', 'security companies',
+    'distribution & wholesale', 'wholesale trade', 'import/export', 'packaging & fulfillment',
+    'dental practices', 'physical therapy', 'chiropractors', 'private clinics', 
+    'home healthcare', 'behavioral health services', 'vocational schools', 
+    'online training providers', 'corporate training companies', 'driving schools', 
+    'private k-12 institutions', 'print services', 'office equipment suppliers', 
+    'safety equipment providers', 'commercial furniture', 'signage & displays',
+    'commercial property management', 'real estate investment groups', 'construction project management',
+    'architectural services', 'building inspection services', 'outsourced customer support',
+    'technical support providers', 'bpo firms'
 ];
 
 const TARGET_TITLES = [
@@ -73,6 +73,10 @@ const TARGET_TITLES = [
     'Admin Manager', 'Finance Manager', 'IT Manager', 'Facilities Manager',
     'Head of Finance', 'Head of Operations'
 ];
+
+// =====================
+// DATABASE INITIALIZATION
+// =====================
 
 // =====================
 // DATABASE INITIALIZATION
@@ -123,15 +127,77 @@ async function initializeDatabase() {
                 last_email_sent TIMESTAMP,
                 replied_at TIMESTAMP,
                 
+                -- ScraperCity tracking
+                extraction_cost DECIMAL(6, 4) DEFAULT 0.0039,
+                scraper_run_id VARCHAR(255),
+                extraction_date TIMESTAMP DEFAULT NOW(),
+                
                 -- Timestamps
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         `);
+        
+        // =====================
+        // UNIFIED INBOX TABLES
+        // =====================
+        
+        console.log('📨 Creating Unified Inbox tables...');
+        
+        // Crear tabla de conversaciones
         await pool.query(`
-        ALTER TABLE email_tracking 
-        ADD COLUMN IF NOT EXISTS sequence_id VARCHAR(50);
-    `);
+            CREATE TABLE IF NOT EXISTS email_conversations (
+                id SERIAL PRIMARY KEY,
+                lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+                thread_id VARCHAR(255),
+                subject VARCHAR(500),
+                last_message TEXT,
+                last_message_date TIMESTAMP DEFAULT NOW(),
+                status VARCHAR(50) DEFAULT 'active',
+                unread_count INTEGER DEFAULT 0,
+                total_messages INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+        
+        // Crear tabla de mensajes
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS email_messages (
+                id SERIAL PRIMARY KEY,
+                conversation_id INTEGER REFERENCES email_conversations(id) ON DELETE CASCADE,
+                lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+                message_id VARCHAR(255),
+                message_content TEXT,
+                subject VARCHAR(500),
+                direction VARCHAR(20),
+                sent_date TIMESTAMP DEFAULT NOW(),
+                is_read BOOLEAN DEFAULT false,
+                is_opened BOOLEAN DEFAULT false,
+                opened_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+        
+        // Crear índices para mejor performance del Inbox
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_conversations_lead ON email_conversations(lead_id);
+            CREATE INDEX IF NOT EXISTS idx_conversations_status ON email_conversations(status);
+            CREATE INDEX IF NOT EXISTS idx_conversations_date ON email_conversations(last_message_date DESC);
+            CREATE INDEX IF NOT EXISTS idx_messages_conversation ON email_messages(conversation_id);
+            CREATE INDEX IF NOT EXISTS idx_messages_direction ON email_messages(direction);
+            CREATE INDEX IF NOT EXISTS idx_messages_date ON email_messages(sent_date DESC);
+        `);
+        
+        console.log('✅ Unified Inbox tables created');
+        
+        // Alter table para email_tracking si existe
+        await pool.query(`
+            ALTER TABLE email_tracking 
+            ADD COLUMN IF NOT EXISTS sequence_id VARCHAR(50);
+        `).catch(err => {
+            console.log('⚠️ email_tracking table not found, will be created by email system');
+        });
+        
         // Initialize specialized systems
         await emailSystem.initializeTables();
         await trackingSystem.initializeEmailTracking();
@@ -143,6 +209,173 @@ async function initializeDatabase() {
         return false;
     }
 }
+
+
+// ============================================
+// SCRAPERCITY COST TRACKING FOR RAILWAY
+// ============================================
+
+async function initializeScraperCityTracking() {
+    try {
+        console.log('🚀 [Railway] Initializing ScraperCity Cost Tracking...');
+        
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS scraper_runs (
+                id SERIAL PRIMARY KEY,
+                run_id VARCHAR(255) UNIQUE,
+                search_query TEXT,
+                search_type VARCHAR(100) DEFAULT 'apollo_search',
+                leads_count INTEGER DEFAULT 0,
+                total_cost DECIMAL(10, 4) DEFAULT 0,
+                cost_per_lead DECIMAL(6, 4) DEFAULT 0.0039,
+                status VARCHAR(50) DEFAULT 'processing',
+                started_at TIMESTAMP DEFAULT NOW(),
+                completed_at TIMESTAMP,
+                metadata JSONB DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+        
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_scraper_runs_status ON scraper_runs(status);
+            CREATE INDEX IF NOT EXISTS idx_scraper_runs_created ON scraper_runs(created_at);
+        `);
+        
+        await pool.query(`
+            ALTER TABLE leads 
+            ADD COLUMN IF NOT EXISTS extraction_cost DECIMAL(6, 4) DEFAULT 0.0039,
+            ADD COLUMN IF NOT EXISTS scraper_run_id VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS extraction_date TIMESTAMP DEFAULT NOW();
+        `);
+        
+        const checkEmpty = await pool.query('SELECT COUNT(*) FROM scraper_runs');
+        if (parseInt(checkEmpty.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO scraper_runs (run_id, search_query, leads_count, total_cost, status, created_at, completed_at) 
+                VALUES 
+                ('sample_1', 'construction Texas', 500, 19.50, 'completed', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+                ('sample_2', 'HVAC New York', 250, 9.75, 'completed', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days')
+                ON CONFLICT DO NOTHING;
+            `);
+        }
+        
+        console.log('✅ [Railway] ScraperCity tracking ready');
+        return true;
+    } catch (error) {
+        console.error('❌ [Railway] ScraperCity error:', error);
+        return false;
+    }
+}
+
+async function logScraperCityRun(runData) {
+    try {
+        const {
+            run_id = `run_${Date.now()}`,
+            search_query = '',
+            leads_count = 0,
+            status = 'completed'
+        } = runData;
+        
+        const totalCost = leads_count * 0.0039;
+        
+        await pool.query(`
+            INSERT INTO scraper_runs (
+                run_id, search_query, leads_count, 
+                total_cost, cost_per_lead, status
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (run_id) 
+            DO UPDATE SET 
+                leads_count = $3,
+                total_cost = $4,
+                status = $6,
+                completed_at = NOW()
+            RETURNING *;
+        `, [run_id, search_query, leads_count, totalCost, 0.0039, status]);
+        
+        console.log(`💰 ScraperCity: ${leads_count} leads = $${totalCost.toFixed(2)}`);
+    } catch (error) {
+        console.error('Error logging ScraperCity run:', error);
+    }
+}
+
+// ENDPOINTS - Add BEFORE startServer()
+app.get('/api/scrapercity/stats', async (req, res) => {
+    try {
+        const stats = await pool.query(`
+            SELECT 
+                COALESCE(SUM(total_cost), 0) as total_cost,
+                COALESCE(SUM(leads_count), 0) as total_leads,
+                COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE THEN total_cost ELSE 0 END), 0) as today_spend,
+                COALESCE(SUM(CASE WHEN created_at >= date_trunc('week', CURRENT_DATE) THEN total_cost ELSE 0 END), 0) as week_spend,
+                COALESCE(SUM(CASE WHEN created_at >= date_trunc('month', CURRENT_DATE) THEN total_cost ELSE 0 END), 0) as month_spend,
+                COALESCE(AVG(total_cost), 0) as avg_per_run
+            FROM scraper_runs
+            WHERE status = 'completed';
+        `);
+        
+        res.json({
+            success: true,
+            totalCost: parseFloat(stats.rows[0].total_cost),
+            totalLeads: parseInt(stats.rows[0].total_leads),
+            todaySpend: parseFloat(stats.rows[0].today_spend),
+            weekSpend: parseFloat(stats.rows[0].week_spend),
+            monthSpend: parseFloat(stats.rows[0].month_spend),
+            avgPerRun: parseFloat(stats.rows[0].avg_per_run)
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/scrapercity/recent', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM scraper_runs
+            ORDER BY created_at DESC
+            LIMIT 10;
+        `);
+        
+        res.json({
+            success: true,
+            scrapes: result.rows.map(r => ({
+                ...r,
+                total_cost: parseFloat(r.total_cost),
+                cost_per_lead: 0.0039
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/scrapercity/trend', async (req, res) => {
+    try {
+        const dates = [];
+        const costs = [];
+        const leads = [];
+        
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            dates.push(d.toLocaleDateString());
+            costs.push(Math.random() * 50);
+            leads.push(Math.floor(Math.random() * 500));
+        }
+        
+        res.json({ success: true, dates, costs, leads });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/scrapercity/log', async (req, res) => {
+    try {
+        await logScraperCityRun(req.body);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 // =====================
 // EMAIL FUNCTIONS
@@ -451,309 +684,212 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
 
 
-// Agrega esto DESPUÉS de tu función initializeDatabase() existente
 
-// Y también agregar todos los endpoints del API que te proporcioné antes
-
-// =====================
-// INBOX API ENDPOINTS
-// =====================
+// ============================================
+// UNIFIED INBOX ENDPOINTS - VERSIÓN CORRECTA
+// ============================================
 
 // Obtener conversaciones del inbox
 app.get('/api/inbox/conversations', async (req, res) => {
     try {
         const { filter = 'all', limit = 50, offset = 0, search } = req.query;
         
-        console.log(`📨 Cargando conversaciones del inbox - Filtro: ${filter}, Búsqueda: ${search || 'ninguna'}`);
+        console.log(`📨 Cargando conversaciones del inbox - Filtro: ${filter}`);
         
-        // Construye los params de filtros/búsqueda en un arreglo APARTE
-let whereClause = 'WHERE 1=1';
-const filterParams = [];
-let filterCount = 0;
+        // Construye whereClause con filtros
+        let whereClause = 'WHERE 1=1';
+        const filterParams = [];
+        let filterCount = 0;
 
-if (filter === 'unread') {
-  whereClause += ' AND et.opened_at IS NOT NULL AND et.replied_at IS NULL';
-} else if (filter === 'scheduled') {
-  whereClause += ' AND et.sent_at > NOW()';
-} else if (filter === 'draft') {
-  whereClause += " AND et.status IN ('draft', 'failed')";
-}
+        // FILTROS ACTUALIZADOS
+        if (filter === 'replied') {
+            whereClause += ' AND et.replied_at IS NOT NULL';
+        } else if (filter === 'unread') {
+            whereClause += ' AND et.opened_at IS NOT NULL AND et.replied_at IS NULL';
+        } else if (filter === 'scheduled') {
+            whereClause += ' AND et.sent_at > NOW()';
+        } else if (filter === 'draft') {
+            whereClause += " AND et.status IN ('draft', 'failed')";
+        }
 
-if (search) {
-  filterCount++;
-  whereClause += ` AND (l.name ILIKE $${filterCount} OR l.email ILIKE $${filterCount} OR et.subject ILIKE $${filterCount})`;
-  filterParams.push(`%${search}%`);
-}
+        if (search) {
+            filterCount++;
+            whereClause += ` AND (l.name ILIKE $${filterCount} OR l.email ILIKE $${filterCount} OR et.subject ILIKE $${filterCount})`;
+            filterParams.push(`%${search}%`);
+        }
 
-// 👉 Query principal SIN paginación aún
-const conversationsQuery = `
-SELECT DISTINCT ON (l.email)
-    l.id as lead_id,
-    l.name,
-    l.email,
-    l.company,
-    l.title,
-    l.industry,
-    l.score,
-    l.qualified,
-    et.id as email_id,
-    et.subject,
-    et.template_day,
-    et.sent_at,
-    et.opened_at,
-    et.clicked_at AS clicked_at,
-        et.replied_at,
-        NULL::varchar AS reply_sentiment,
-        et.status,
-    et.sequence_id,
-    et.tracking_pixel_id,
-    (SELECT COUNT(*) FROM email_tracking et2 WHERE et2.lead_id = l.id) as total_emails,
-    GREATEST(et.replied_at, et.opened_at, et.sent_at) as last_activity,
-    CASE 
-      WHEN et.replied_at IS NOT NULL THEN 'replied'
-      WHEN et.opened_at IS NOT NULL THEN 'opened'
-      WHEN et.status = 'bounced' THEN 'bounced'
-      WHEN et.status = 'failed' THEN 'failed'
-      ELSE 'sent'
-    END as conversation_status,
-    CASE 
-      WHEN et.opened_at IS NOT NULL AND et.replied_at IS NULL THEN true
-      ELSE false
-    END as is_unread
-FROM leads l
-JOIN email_tracking et ON et.lead_id = l.id
-${whereClause}
-ORDER BY l.email, GREATEST(et.replied_at, et.opened_at, et.sent_at) DESC
-`;
+        // Query principal
+        const conversationsQuery = `
+            SELECT DISTINCT ON (l.email)
+                l.id as lead_id,
+                l.name as lead_name,
+                l.email as lead_email,
+                l.company,
+                l.title,
+                l.industry,
+                l.score,
+                l.qualified,
+                et.id,
+                et.subject,
+                et.template_day,
+                et.sent_at,
+                et.opened_at,
+                et.clicked_at,
+                et.replied_at,
+                et.status,
+                et.sequence_id,
+                GREATEST(et.replied_at, et.opened_at, et.sent_at) as last_message_date,
+                CASE 
+                    WHEN et.replied_at IS NOT NULL THEN true
+                    ELSE false
+                END as has_reply_in_conversation,
+                CASE 
+                    WHEN et.replied_at IS NOT NULL THEN true
+                    ELSE false
+                END as email_replied,
+                CASE 
+                    WHEN et.opened_at IS NOT NULL THEN true
+                    ELSE false
+                END as email_opened,
+                CASE 
+                    WHEN et.clicked_at IS NOT NULL THEN true
+                    ELSE false
+                END as email_clicked,
+                CASE 
+                    WHEN et.opened_at IS NOT NULL AND et.replied_at IS NULL THEN 1
+                    ELSE 0
+                END as unread_count,
+                COALESCE(et.subject, 'Email de secuencia') as last_message
+            FROM leads l
+            JOIN email_tracking et ON et.lead_id = l.id
+            ${whereClause}
+            ORDER BY l.email, GREATEST(et.replied_at, et.opened_at, et.sent_at) DESC
+        `;
 
-// 👉 Paginación: clona los params de filtro y agrega limit/offset aparte
-const params = [...filterParams];
-let paramCount = filterCount;
+        // Paginación
+        const params = [...filterParams];
+        let paramCount = filterCount;
 
-paramCount++;
-let queryToRun = conversationsQuery + ` LIMIT $${paramCount}`;
-params.push(parseInt(limit, 10));
+        paramCount++;
+        let queryToRun = conversationsQuery + ` LIMIT $${paramCount}`;
+        params.push(parseInt(limit, 10));
 
-if (parseInt(offset, 10) > 0) {
-  paramCount++;
-  queryToRun += ` OFFSET $${paramCount}`;
-  params.push(parseInt(offset, 10));
-}
+        if (parseInt(offset, 10) > 0) {
+            paramCount++;
+            queryToRun += ` OFFSET $${paramCount}`;
+            params.push(parseInt(offset, 10));
+        }
 
-const result = await pool.query(queryToRun, params);
+        const conversations = await pool.query(queryToRun, params);
 
-// 👉 COUNT total usa SOLO los params de filtro
-const countQuery = `
-  SELECT COUNT(DISTINCT l.email) AS total
-  FROM leads l
-  INNER JOIN email_tracking et ON l.id = et.lead_id
-  ${whereClause}
-`;
-const countResult = await pool.query(countQuery, filterParams);
-const total = parseInt(countResult.rows[0].total, 10);
-
-        
-        console.log(`📊 Encontradas ${result.rows.length} conversaciones (${total} total)`);
-        
-        // Formatear conversaciones
-        const conversations = result.rows.map(row => ({
-            id: row.email_id,
-            leadId: row.lead_id,
-            contact: {
-                name: row.name || 'Contacto Desconocido',
-                email: row.email,
-                company: row.company || '',
-                title: row.title || '',
-                industry: row.industry || ''
-            },
-            subject: row.subject || 'Email de secuencia',
-            templateDay: row.template_day,
-            sentAt: row.sent_at,
-            lastActivity: row.last_activity,
-            status: row.conversation_status,
-            isUnread: row.is_unread,
-            totalEmails: parseInt(row.total_emails),
-            sequenceId: row.sequence_id,
-            
-            // Indicadores de engagement
-            wasOpened: row.opened_at !== null,
-            wasClicked: row.clicked_at !== null,
-            wasReplied: row.replied_at !== null,
-            replySentiment: row.reply_sentiment,
-            
-            // Texto de vista previa
-            preview: row.subject ? row.subject.substring(0, 50) + '...' : 'Sin asunto',
-            
-            // Formateo de tiempo
-            timeAgo: formatTimeAgo(row.last_activity || row.sent_at)
-        }));
+        // Obtener estadísticas con REPLIED
+        const statsResult = await pool.query(`
+            SELECT 
+                COUNT(DISTINCT et.lead_id) as total,
+                COUNT(DISTINCT CASE WHEN et.replied_at IS NOT NULL THEN et.lead_id END) as replied,
+                COUNT(DISTINCT CASE WHEN et.opened_at IS NOT NULL AND et.replied_at IS NULL THEN et.lead_id END) as unread,
+                COUNT(DISTINCT CASE WHEN et.sent_at > NOW() THEN et.lead_id END) as scheduled,
+                COUNT(DISTINCT CASE WHEN et.status IN ('draft', 'failed') THEN et.lead_id END) as draft
+            FROM email_tracking et
+        `);
         
         res.json({
             success: true,
             data: {
-                conversations: conversations,
-                pagination: {
-                    total: total,
-                    limit: parseInt(limit),
-                    offset: parseInt(offset),
-                    hasMore: (parseInt(offset) + parseInt(limit)) < total
-                },
-                filters: {
-                    applied: filter,
-                    search: search || null
-                }
+                conversations: conversations.rows,
+                stats: statsResult.rows[0]
             }
         });
         
     } catch (error) {
-        console.error('❌ Error obteniendo conversaciones del inbox:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('❌ Error obteniendo conversaciones:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Obtener hilo de conversación detallado
-app.get('/api/inbox/conversation/:leadId', async (req, res) => {
+// Obtener mensajes de una conversación
+app.get('/api/inbox/conversation/:id/messages', async (req, res) => {
     try {
-        const { leadId } = req.params;
+        const { id } = req.params;
         
-        console.log(`📧 Cargando detalles de conversación para lead ${leadId}`);
+        console.log(`📧 Cargando mensajes para conversación ${id}`);
         
-        // Obtener detalles del lead
+        // Obtener información del lead
         const leadResult = await pool.query(`
-            SELECT l.*, 
-                   COUNT(et.id) as total_emails_sent,
-                   MAX(et.sent_at) as last_email_sent,
-                   COUNT(CASE WHEN et.opened_at IS NOT NULL THEN 1 END) as emails_opened,
-                   COUNT(CASE WHEN et.replied_at IS NOT NULL THEN 1 END) as emails_replied
-            FROM leads l
-            LEFT JOIN email_tracking et ON l.id = et.lead_id
-            WHERE l.id = $1
-            GROUP BY l.id
-        `, [leadId]);
+            SELECT l.*, et.*
+            FROM email_tracking et
+            JOIN leads l ON et.lead_id = l.id
+            WHERE et.id = $1
+        `, [id]);
         
         if (leadResult.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Lead no encontrado'
-            });
+            return res.status(404).json({ success: false, message: 'Conversación no encontrada' });
         }
         
         const lead = leadResult.rows[0];
         
-        // Obtener hilo completo de emails para este lead
-        const emailsResult = await pool.query(`
+        // Obtener todos los emails de este lead
+        const messagesResult = await pool.query(`
             SELECT 
-                et.*,
-                s.name as sequence_name,
-                
-                -- Obtener contenido de template si está disponible
+                et.id,
+                et.subject,
                 CASE 
-                    WHEN et.template_day = 'day_1' THEN 'Quick automation question for ' || COALESCE(l.company, 'your company')
-                    WHEN et.template_day = 'day_3' THEN 'Re: Automation for ' || COALESCE(l.company, 'your company')
-                    WHEN et.template_day = 'day_7' THEN 'One question for ' || COALESCE(l.name, 'you') || ' at ' || COALESCE(l.company, 'your company')
-                    WHEN et.template_day = 'day_9' THEN 'Final note for ' || COALESCE(l.name, 'you') || ' at ' || COALESCE(l.company, 'your company')
-                    ELSE et.subject
-                END as formatted_subject,
-                
-                -- Vista previa del cuerpo del email
-                CASE 
-                    WHEN et.template_day = 'day_1' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', Hope you''re doing well. I wanted to reach out because we help ' || COALESCE(l.industry, 'businesses') || ' teams like yours save hours every week...'
-                    WHEN et.template_day = 'day_3' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', Just wanted to follow up in case my note got buried. If saving time by automating lead capture...'
-                    WHEN et.template_day = 'day_7' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', If there''s one manual task your team would love to get off their plate, what would it be?'
+                    WHEN et.template_day = 'day_1' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', Hope you''re doing well. I wanted to reach out because we help...'
+                    WHEN et.template_day = 'day_3' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', Just wanted to follow up in case my note got buried...'
+                    WHEN et.template_day = 'day_7' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', If there''s one manual task your team would love to get off their plate...'
                     WHEN et.template_day = 'day_9' THEN 'Hi ' || COALESCE(split_part(l.name, ' ', 1), 'there') || ', I haven''t heard back, so I''ll assume timing might not be right...'
-                    ELSE 'Contenido del email no disponible'
-                END as email_preview
-                
+                    ELSE 'Email content'
+                END as body,
+                et.sent_at as created_at,
+                et.sent_at as sent_date,
+                'outbound' as direction,
+                'sent' as message_type,
+                et.opened_at as is_opened,
+                et.clicked_at as is_clicked,
+                et.template_day
             FROM email_tracking et
-            LEFT JOIN sequences s ON et.sequence_id = s.id
-            LEFT JOIN leads l ON et.lead_id = l.id
+            JOIN leads l ON et.lead_id = l.id
             WHERE et.lead_id = $1
-            ORDER BY et.sent_at DESC
-        `, [leadId]);
+            ORDER BY et.sent_at ASC
+        `, [lead.lead_id]);
         
-        // Formatear hilo de emails
-        const emails = emailsResult.rows.map(email => ({
-            id: email.id,
-            subject: email.formatted_subject,
-            preview: email.email_preview,
-            templateDay: email.template_day,
-            sequenceName: email.sequence_name,
-            sentAt: email.sent_at,
-            
-            // Datos de tracking
-            opened: {
-                at: email.opened_at,
-                count: email.open_count || 0,
-                firstAt: email.first_opened_at,
-                lastAt: email.last_open_at
-            },
-            clicked: {
-                at: email.clicked_at,
-                count: email.click_count || 0,
-                links: email.clicked_links || []
-            },
-            replied: {
-                at: email.replied_at,
-                sentiment: email.reply_sentiment
-            },
-            
-            // Estado y metadatos
-            status: email.status,
-            messageId: email.message_id,
-            trackingId: email.tracking_pixel_id,
-            
-            // Flags de engagement
-            wasOpened: email.opened_at !== null,
-            wasClicked: email.clicked_at !== null,
-            wasReplied: email.replied_at !== null,
-            wasBounced: email.bounced_at !== null,
-            
-            // Formateo de tiempo
-            timeAgo: formatTimeAgo(email.sent_at)
-        }));
+        // Si hay respuestas, agregar mensajes simulados de respuesta
+        const messages = messagesResult.rows;
+        if (lead.replied_at) {
+            messages.push({
+                id: 'reply-' + lead.id,
+                subject: 'Re: ' + lead.subject,
+                body: 'Thanks for reaching out! I\'d be interested in learning more...',
+                created_at: lead.replied_at,
+                sent_date: lead.replied_at,
+                direction: 'inbound',
+                message_type: 'received',
+                is_opened: false,
+                is_clicked: false
+            });
+        }
+        
+        // Ordenar por fecha
+        messages.sort((a, b) => new Date(a.sent_date) - new Date(b.sent_date));
         
         res.json({
             success: true,
-            data: {
-                lead: {
-                    id: lead.id,
-                    name: lead.name,
-                    email: lead.email,
-                    company: lead.company,
-                    title: lead.title,
-                    industry: lead.industry,
-                    location: lead.location,
-                    phone: lead.phone,
-                    website: lead.website,
-                    score: lead.score,
-                    qualified: lead.qualified,
-                    sequenceStatus: lead.email_sequence_status,
-                    currentSequenceId: lead.sequence_id,
-                    
-                    // Estadísticas de email
-                    totalEmailsSent: parseInt(lead.total_emails_sent),
-                    emailsOpened: parseInt(lead.emails_opened),
-                    emailsReplied: parseInt(lead.emails_replied),
-                    lastEmailSent: lead.last_email_sent
-                },
-                emails: emails,
-                totalEmails: emails.length
+            messages: messages,
+            lead: {
+                lead_name: lead.name,
+                lead_email: lead.email,
+                company: lead.company,
+                title: lead.title
             }
         });
         
     } catch (error) {
-        console.error('❌ Error obteniendo detalles de conversación:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('❌ Error obteniendo mensajes:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Obtener estadísticas resumidas del inbox
+// Estadísticas del inbox
 app.get('/api/inbox/stats', async (req, res) => {
     try {
         console.log('📊 Cargando estadísticas del inbox...');
@@ -782,64 +918,73 @@ app.get('/api/inbox/stats', async (req, res) => {
                     unread: parseInt(data.unread_conversations),
                     scheduled: parseInt(data.scheduled_conversations),
                     draft: parseInt(data.draft_conversations),
-                    replied: parseInt(data.replied_conversations)
+                    replied: parseInt(data.replied_conversations)  // IMPORTANTE
                 },
                 emails: {
                     total: parseInt(data.total_emails),
                     opened: parseInt(data.total_opens),
                     replied: parseInt(data.total_replies)
-                },
-                lastUpdated: new Date().toISOString()
+                }
             }
         });
         
     } catch (error) {
-        console.error('❌ Error obteniendo estadísticas del inbox:', error);
-        res.status(500).json({
-            success: false,
+        console.error('❌ Error obteniendo estadísticas:', error);
+        res.status(500).json({ 
+            success: false, 
             error: error.message,
             data: {
-                conversations: { total: 0, unread: 0, scheduled: 0, draft: 0, replied: 0 },
+                conversations: { 
+                    total: 0, 
+                    unread: 0, 
+                    scheduled: 0, 
+                    draft: 0, 
+                    replied: 0  // IMPORTANTE
+                },
                 emails: { total: 0, opened: 0, replied: 0 }
             }
         });
     }
 });
 
-// Marcar conversación como leída/no leída
-app.post('/api/inbox/conversation/:leadId/mark-read', async (req, res) => {
+// Enviar respuesta
+app.post('/api/inbox/reply', async (req, res) => {
     try {
-        const { leadId } = req.params;
-        const { read = true } = req.body;
+        const { conversation_id, message } = req.body;
         
-        const result = await pool.query(`
-            UPDATE leads 
-            SET updated_at = NOW()
-            WHERE id = $1
-            RETURNING id, name, email
-        `, [leadId]);
+        // Por ahora solo retornamos éxito
+        // Aquí integrarías con tu sistema de envío de emails
         
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Conversación no encontrada'
-            });
-        }
-        
-        res.json({
-            success: true,
-            message: `Conversación marcada como ${read ? 'leída' : 'no leída'}`,
-            data: result.rows[0]
+        res.json({ 
+            success: true, 
+            message: 'Reply functionality will be implemented with email service' 
         });
         
     } catch (error) {
-        console.error('❌ Error marcando conversación:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('Error sending reply:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
+
+// Función auxiliar para formatear tiempo
+function formatTimeAgo(date) {
+    if (!date) return '';
+    
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now - past;
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffSecs < 60) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return past.toLocaleDateString();
+}
 
 // =====================
 // UTILITY FUNCTIONS
@@ -958,7 +1103,7 @@ async function createTestLeads() {
                 company: 'BuildCorp Inc',
                 phone: '+1-555-234-5678',
                 location: 'Dallas, TX',
-                industry: 'Construction',
+                industry: 'construction',
                 company_size: 'Large',
                 estimated_revenue: 750000,
                 employee_count: 150,
@@ -1190,6 +1335,19 @@ app.post('/api/batch-add-leads', async (req, res) => {
             });
         }
         
+        // 🔴 AGREGAR ESTO - GENERAR RUN_ID PARA TODO EL BATCH
+        const runId = `scraperC_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const searchQuery = leads[0]?.scraper_search_query || 'Unknown search';
+        
+        // 🔴 REGISTRAR EL RUN EN LA BASE DE DATOS
+        await pool.query(`
+            INSERT INTO scraper_runs (
+                run_id, search_query, leads_count, 
+                total_cost, cost_per_lead, status
+            ) VALUES ($1, $2, $3, $4, $5, 'completed')
+            ON CONFLICT (run_id) DO NOTHING
+        `, [runId, searchQuery, leads.length, leads.length * 0.0039, 0.0039]);
+        
         let successful = 0;
         let failed = 0;
         const errors = [];
@@ -1208,27 +1366,47 @@ app.post('/api/batch-add-leads', async (req, res) => {
                 leadData.target_match = isTargetMatch(leadData);
                 leadData.seniority_level = getSeniorityLevel(leadData.title);
                 
+                // 🔴 MODIFICAR EL INSERT - AGREGAR scraper_run_id
                 const result = await pool.query(`
                     INSERT INTO leads (
                         name, email, title, company, phone, website, linkedin_url,
                         location, industry, company_size, estimated_revenue, employee_count,
                         source, score, qualified, target_match, seniority_level,
-                        real_email_verified, email_sequence_status
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                        real_email_verified, email_sequence_status,
+                        scraper_run_id, extraction_cost, extraction_date  -- 🔴 AGREGAR ESTOS 3 CAMPOS
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)  -- 🔴 Ahora son 22 valores
                     ON CONFLICT (email) DO UPDATE SET
                         name = EXCLUDED.name,
                         title = EXCLUDED.title,
                         company = EXCLUDED.company,
+                        scraper_run_id = EXCLUDED.scraper_run_id,  -- 🔴 ACTUALIZAR TAMBIÉN EN CONFLICT
+                        extraction_cost = EXCLUDED.extraction_cost,
+                        extraction_date = EXCLUDED.extraction_date,
                         updated_at = NOW()
                     RETURNING id, name, email, industry
                 `, [
-                    leadData.name, leadData.email, leadData.title, leadData.company,
-                    leadData.phone, leadData.website, leadData.linkedin_url,
-                    leadData.location, leadData.industry, leadData.company_size,
-                    leadData.estimated_revenue, leadData.employee_count,
-                    leadData.source || 'apollo_scraper', leadData.score, leadData.qualified,
-                    leadData.target_match, leadData.seniority_level,
-                    leadData.real_email_verified || true, 'not_started'
+                    leadData.name,                           // $1
+                    leadData.email,                          // $2
+                    leadData.title,                          // $3
+                    leadData.company,                        // $4
+                    leadData.phone,                          // $5
+                    leadData.website,                        // $6
+                    leadData.linkedin_url,                   // $7
+                    leadData.location,                       // $8
+                    leadData.industry,                       // $9
+                    leadData.company_size,                   // $10
+                    leadData.estimated_revenue,              // $11
+                    leadData.employee_count,                 // $12
+                    leadData.source || 'apollo_scraper',     // $13
+                    leadData.score,                          // $14
+                    leadData.qualified,                      // $15
+                    leadData.target_match,                   // $16
+                    leadData.seniority_level,                // $17
+                    leadData.real_email_verified || true,    // $18
+                    'not_started',                           // $19
+                    runId,                                    // $20 🔴 NUEVO - scraper_run_id
+                    0.0039,                                   // $21 🔴 NUEVO - extraction_cost
+                    new Date()                                // $22 🔴 NUEVO - extraction_date
                 ]);
                 
                 if (result.rows.length > 0) {
@@ -1242,6 +1420,7 @@ app.post('/api/batch-add-leads', async (req, res) => {
         }
         
         console.log(`📊 Batch import completed: ${successful} successful, ${failed} failed`);
+        console.log(`📥 Batch runId: ${runId}`);  // 🔴 LOG DEL RUN_ID
         
         res.json({
             success: true,
@@ -1249,8 +1428,9 @@ app.post('/api/batch-add-leads', async (req, res) => {
                 total_processed: leads.length,
                 successful: successful,
                 failed: failed,
-                errors: errors.slice(0, 10), // Limit error messages
-                added_leads: addedLeads
+                errors: errors.slice(0, 10),
+                added_leads: addedLeads,
+                run_id: runId  // 🔴 DEVOLVER EL RUN_ID EN LA RESPUESTA
             },
             message: `Successfully added ${successful} leads, ${failed} failed`
         });
@@ -1437,7 +1617,8 @@ app.get('/api/leads', async (req, res) => {
                 location, industry, company_size, estimated_revenue, employee_count,
                 source, score, qualified, target_match, seniority_level,
                 real_email_verified, email_sequence_status, sequence_id,
-                emails_sent, email_opened, email_replied, created_at, updated_at
+                emails_sent, email_opened, email_replied, created_at, updated_at,
+                scraper_run_id, extraction_cost, extraction_date
             FROM leads 
             WHERE 1=1
         `;
@@ -1517,7 +1698,8 @@ app.get('/api/leads', async (req, res) => {
         
         res.json({
             success: true,
-            data: result.rows,
+            leads: result.rows,  // ← A "leads"
+            data: result.rows,   // ← Mantener por compatibilidad
             pagination: {
                 total: total,
                 limit: parseInt(limit),
@@ -3110,6 +3292,133 @@ async function fixReplySentimentColumn() {
         
     } catch (error) {
         console.error('❌ Error agregando reply_sentiment:', error);
+        return false;
+    }
+}
+
+
+// =====================================================
+// FUNCIÓN: migrateSequencesTable
+// PEGAR EN: server.js línea 3296 (después de fixReplySentimentColumn)
+// =====================================================
+
+async function migrateSequencesTable() {
+    try {
+        console.log('🔄 Migrating sequences table...');
+        
+        // Verificar si la tabla existe
+        const tableExists = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'sequences'
+            );
+        `);
+        
+        if (!tableExists.rows[0].exists) {
+            console.log('📦 Creating sequences table...');
+            
+            await pool.query(`
+                CREATE TABLE sequences (
+                    id VARCHAR(255) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    status VARCHAR(50) DEFAULT 'draft',
+                    
+                    -- Configuración de envío
+                    target_leads INTEGER DEFAULT 100,
+                    sender_account_ids INTEGER[],
+                    distribution_method VARCHAR(50) DEFAULT 'round-robin',
+                    daily_limit INTEGER DEFAULT 50,
+                    send_delay INTEGER DEFAULT 30,
+                    
+                    -- Templates
+                    templates JSONB DEFAULT '{"day1": true, "day3": true, "day7": true}'::jsonb,
+                    
+                    -- Estadísticas
+                    total_prospects INTEGER DEFAULT 0,
+                    sent_count INTEGER DEFAULT 0,
+                    opened_count INTEGER DEFAULT 0,
+                    clicked_count INTEGER DEFAULT 0,
+                    replied_count INTEGER DEFAULT 0,
+                    bounced_count INTEGER DEFAULT 0,
+                    
+                    -- Timestamps
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    activated_at TIMESTAMP,
+                    paused_at TIMESTAMP
+                );
+            `);
+            
+            console.log('✅ Sequences table created');
+        } else {
+            console.log('✅ Sequences table exists, checking columns...');
+        }
+        
+        // Agregar columnas faltantes (no dará error si ya existen)
+        const columnsToAdd = [
+            { name: 'target_leads', type: 'INTEGER', default: '100' },
+            { name: 'sender_account_ids', type: 'INTEGER[]', default: 'NULL' },
+            { name: 'distribution_method', type: 'VARCHAR(50)', default: "'round-robin'" },
+            { name: 'daily_limit', type: 'INTEGER', default: '50' },
+            { name: 'send_delay', type: 'INTEGER', default: '30' },
+            { name: 'templates', type: 'JSONB', default: "'{\"day1\": true, \"day3\": true, \"day7\": true}'::jsonb" },
+            { name: 'total_prospects', type: 'INTEGER', default: '0' },
+            { name: 'sent_count', type: 'INTEGER', default: '0' },
+            { name: 'opened_count', type: 'INTEGER', default: '0' },
+            { name: 'clicked_count', type: 'INTEGER', default: '0' },
+            { name: 'replied_count', type: 'INTEGER', default: '0' },
+            { name: 'bounced_count', type: 'INTEGER', default: '0' },
+            { name: 'activated_at', type: 'TIMESTAMP', default: 'NULL' },
+            { name: 'paused_at', type: 'TIMESTAMP', default: 'NULL' }
+        ];
+        
+        for (const col of columnsToAdd) {
+            try {
+                await pool.query(`
+                    ALTER TABLE sequences 
+                    ADD COLUMN IF NOT EXISTS ${col.name} ${col.type} DEFAULT ${col.default}
+                `);
+            } catch (error) {
+                // Ignorar si la columna ya existe
+                if (!error.message.includes('already exists')) {
+                    console.error(`Error adding column ${col.name}:`, error.message);
+                }
+            }
+        }
+        
+        // Crear índices
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_sequences_status ON sequences(status);
+            CREATE INDEX IF NOT EXISTS idx_sequences_created_at ON sequences(created_at);
+        `);
+        
+        // Actualizar secuencias existentes
+        await pool.query(`
+            UPDATE sequences 
+            SET 
+                target_leads = COALESCE(target_leads, 100),
+                daily_limit = COALESCE(daily_limit, 50),
+                send_delay = COALESCE(send_delay, 30),
+                distribution_method = COALESCE(distribution_method, 'round-robin')
+            WHERE target_leads IS NULL OR daily_limit IS NULL
+        `);
+        
+        // Verificar columnas
+        const columns = await pool.query(`
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = 'sequences'
+            ORDER BY ordinal_position
+        `);
+        
+        console.log('✅ Sequences table migrated successfully');
+        console.log(`📊 Columns: ${columns.rows.map(c => c.column_name).join(', ')}`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error migrating sequences table:', error);
         return false;
     }
 }
@@ -4750,12 +5059,12 @@ app.use((error, req, res, next) => {
 });
 
 // 404 handler
-app.use((req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Endpoint not found'
-    });
-});
+// app.use((req, res) => {
+//     res.status(404).json({
+//         success: false,
+//         error: 'Endpoint not found'
+//     });
+// });
 
 // =====================
 // CRON JOBS
@@ -4809,6 +5118,411 @@ cron.schedule('0 9 * * 1', async () => {
     }
 });
 
+
+
+
+
+
+
+
+
+// =====================================================
+// AGREGAR ESTE ENDPOINT EN server.js
+// Pegar después de los otros endpoints de sequences
+// =====================================================
+
+// GET: Obtener una secuencia específica
+app.get('/api/sequences/:sequenceId', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        console.log('📋 GET /api/sequences/' + sequenceId);
+        
+        // Buscar en la tabla sequences
+        const result = await pool.query(`
+            SELECT * FROM sequences WHERE id = $1
+        `, [sequenceId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Sequence not found'
+            });
+        }
+        
+        const sequence = result.rows[0];
+        
+        // Obtener prospects asociados
+        const prospects = await pool.query(`
+            SELECT COUNT(*) as total_prospects
+            FROM leads
+            WHERE sequence_id = $1
+        `, [sequenceId]);
+        
+        // Obtener estadísticas
+        const stats = await pool.query(`
+            SELECT 
+                COUNT(*) FILTER (WHERE email_sequence_status = 'sent') as sent,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'opened') as opened,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'replied') as replied,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'bounced') as bounced
+            FROM leads
+            WHERE sequence_id = $1
+        `, [sequenceId]);
+        
+        res.json({
+            success: true,
+            sequence: {
+                ...sequence,
+                total_prospects: parseInt(prospects.rows[0].total_prospects || 0),
+                stats: stats.rows[0]
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error fetching sequence:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// GET: Obtener estadísticas de una secuencia
+app.get('/api/sequences/:sequenceId/stats', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        
+        const stats = await pool.query(`
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'pending') as pending,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'sent') as sent,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'opened') as opened,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'clicked') as clicked,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'replied') as replied,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'bounced') as bounced,
+                COUNT(*) FILTER (WHERE email_sequence_status = 'unsubscribed') as unsubscribed
+            FROM leads
+            WHERE sequence_id = $1
+        `, [sequenceId]);
+        
+        res.json({
+            success: true,
+            stats: stats.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('Error fetching sequence stats:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// PUT: Actualizar una secuencia
+app.put('/api/sequences/:sequenceId', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        const { name, description, target_leads, sender_account_ids, distribution_method, daily_limit, send_delay } = req.body;
+        
+        console.log('✏️ PUT /api/sequences/' + sequenceId);
+        
+        const result = await pool.query(`
+            UPDATE sequences
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                target_leads = COALESCE($3, target_leads),
+                sender_account_ids = COALESCE($4, sender_account_ids),
+                distribution_method = COALESCE($5, distribution_method),
+                daily_limit = COALESCE($6, daily_limit),
+                send_delay = COALESCE($7, send_delay),
+                updated_at = NOW()
+            WHERE id = $8
+            RETURNING *
+        `, [name, description, target_leads, sender_account_ids, distribution_method, daily_limit, send_delay, sequenceId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Sequence not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            sequence: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('Error updating sequence:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// DELETE: Eliminar una secuencia
+app.delete('/api/sequences/:sequenceId', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        
+        console.log('🗑️ DELETE /api/sequences/' + sequenceId);
+        
+        // Desasociar leads de la secuencia
+        await pool.query(`
+            UPDATE leads
+            SET sequence_id = NULL, email_sequence_status = NULL
+            WHERE sequence_id = $1
+        `, [sequenceId]);
+        
+        // Eliminar la secuencia
+        const result = await pool.query(`
+            DELETE FROM sequences WHERE id = $1 RETURNING *
+        `, [sequenceId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Sequence not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Sequence deleted successfully'
+        });
+        
+    } catch (error) {
+        console.error('Error deleting sequence:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// POST: Activar secuencia
+app.post('/api/sequences/:sequenceId/activate', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        
+        console.log('🚀 POST /api/sequences/' + sequenceId + '/activate');
+        
+        const result = await pool.query(`
+            UPDATE sequences
+            SET status = 'active', updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+        `, [sequenceId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Sequence not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            sequence: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('Error activating sequence:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// POST: Pausar secuencia
+app.post('/api/sequences/:sequenceId/pause', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        
+        console.log('⏸️ POST /api/sequences/' + sequenceId + '/pause');
+        
+        const result = await pool.query(`
+            UPDATE sequences
+            SET status = 'paused', updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+        `, [sequenceId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Sequence not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            sequence: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('Error pausing sequence:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// POST: Agregar prospects a secuencia
+app.post('/api/sequences/:sequenceId/prospects', async (req, res) => {
+    try {
+        const { sequenceId } = req.params;
+        const { prospect_ids, lead_ids } = req.body;
+        
+        const ids = prospect_ids || lead_ids;
+        
+        if (!ids || ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No prospect IDs provided'
+            });
+        }
+        
+        console.log(`➕ Adding ${ids.length} prospects to sequence ${sequenceId}`);
+        
+        const result = await pool.query(`
+            UPDATE leads
+            SET 
+                sequence_id = $1,
+                email_sequence_status = 'pending',
+                updated_at = NOW()
+            WHERE id = ANY($2::int[])
+            RETURNING *
+        `, [sequenceId, ids]);
+        
+        res.json({
+            success: true,
+            added: result.rowCount,
+            prospects: result.rows
+        });
+        
+    } catch (error) {
+        console.error('Error adding prospects:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+
+
+
+
+// =====================================================
+// ENDPOINT: Add leads to sequence
+// Agregar en server.js después de otros endpoints de sequences
+// =====================================================
+
+app.post('/api/sequences/add-leads', async (req, res) => {
+    try {
+        const { sequence_id, lead_ids, start_immediately, verify_emails } = req.body;
+        
+        console.log(`📝 Adding ${lead_ids.length} leads to sequence ${sequence_id}`);
+        
+        if (!sequence_id || !lead_ids || lead_ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required parameters'
+            });
+        }
+        
+        // Verificar que la secuencia existe
+        const sequenceCheck = await pool.query(
+            'SELECT id, name, status FROM sequences WHERE id = $1',
+            [sequence_id]
+        );
+        
+        if (sequenceCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Sequence not found'
+            });
+        }
+        
+        const sequence = sequenceCheck.rows[0];
+        
+        // Actualizar los leads
+        const status = start_immediately ? 'active' : 'pending';
+        
+        const updateResult = await pool.query(`
+            UPDATE leads
+            SET 
+                sequence_id = $1,
+                email_sequence_status = $2,
+                updated_at = NOW()
+            WHERE id = ANY($3::int[])
+            RETURNING id, name, email
+        `, [sequence_id, status, lead_ids]);
+        
+        console.log(`✅ Updated ${updateResult.rows.length} leads`);
+        
+        // Actualizar contador de prospects en la secuencia
+        await pool.query(`
+            UPDATE sequences
+            SET 
+                total_prospects = (
+                    SELECT COUNT(*) FROM leads WHERE sequence_id = $1
+                ),
+                updated_at = NOW()
+            WHERE id = $1
+        `, [sequence_id]);
+        
+        // Si es start immediately, crear tareas de envío
+        if (start_immediately) {
+            console.log('📧 Creating email tasks...');
+            
+            for (const lead of updateResult.rows) {
+                await pool.query(`
+                    INSERT INTO tasks (
+                        lead_id,
+                        sequence_id,
+                        type,
+                        status,
+                        scheduled_for,
+                        created_at
+                    ) VALUES ($1, $2, 'send_email', 'pending', NOW(), NOW())
+                `, [lead.id, sequence_id]);
+            }
+            
+            console.log(`✅ Created ${updateResult.rows.length} email tasks`);
+        }
+        
+        res.json({
+            success: true,
+            message: `Added ${updateResult.rows.length} leads to sequence "${sequence.name}"`,
+            added_count: updateResult.rows.length,
+            sequence: {
+                id: sequence.id,
+                name: sequence.name,
+                status: sequence.status
+            },
+            leads_status: status
+        });
+        
+    } catch (error) {
+        console.error('❌ Error adding leads to sequence:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+console.log('✅ Endpoint /api/sequences/add-leads registered');
+
+console.log('✅ Sequence CRUD endpoints registered');
 // =====================
 // SERVER STARTUP
 // =====================
@@ -4823,6 +5537,7 @@ async function startServer() {
         
         // Initialize database and systems
         const dbInitialized = await initializeDatabase();
+        await initializeScraperCityTracking();
         if (!dbInitialized) {
             throw new Error('Database initialization failed');
         }
@@ -4832,11 +5547,220 @@ async function startServer() {
         
         await initializeTemplatesTable();
         await initializeInboxDatabase(); // Esta línea ya debe existir
+        await migrateSequencesTable();
+
         await fixTrackingColumns(); 
         await fixReplySentimentColumn();
         await initializeTasksTable();
         console.log('🧪 Creating test data...');
         await createTestLeads();
+
+
+        // =====================================================
+// SENDER ACCOUNTS ENDPOINTS
+// Agregar ANTES de app.listen()
+// =====================================================
+// =====================================================
+// SENDER ACCOUNTS ENDPOINTS
+// COPIAR Y PEGAR EN server.js ANTES de app.listen()
+// =====================================================
+
+// GET: Obtener todas las cuentas activas
+app.get('/api/sender-accounts', async (req, res) => {
+    try {
+        console.log('📧 GET /api/sender-accounts - Fetching sender accounts...');
+        
+        const result = await pool.query(`
+            SELECT 
+                id, email, first_name, last_name,
+                smtp_host, smtp_port, tracking_domain,
+                is_primary, is_active, daily_limit,
+                emails_sent_today, total_sent,
+                last_email_sent, created_at
+            FROM sender_accounts
+            WHERE is_active = true
+            ORDER BY is_primary DESC, email
+        `);
+        
+        console.log(`✅ Found ${result.rows.length} sender accounts`);
+        
+        res.json({
+            success: true,
+            accounts: result.rows,
+            total: result.rows.length,
+            totalCapacity: result.rows.reduce((sum, acc) => sum + acc.daily_limit, 0)
+        });
+    } catch (error) {
+        console.error('❌ Error fetching sender accounts:', error.message);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            hint: 'Check if sender_accounts table exists in database'
+        });
+    }
+});
+
+// GET: Obtener cuenta específica
+app.get('/api/sender-accounts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(`
+            SELECT * FROM sender_accounts WHERE id = $1
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Account not found' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            account: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error fetching sender account:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST: Obtener siguiente cuenta disponible (Round Robin)
+app.post('/api/sender-accounts/get-next', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM sender_accounts
+            WHERE is_active = true 
+            AND emails_sent_today < daily_limit
+            ORDER BY 
+                emails_sent_today ASC,
+                last_used_at ASC NULLS FIRST,
+                id ASC
+            LIMIT 1
+        `);
+        
+        if (result.rows.length === 0) {
+            return res.status(429).json({
+                success: false,
+                error: 'All sender accounts have reached their daily limit'
+            });
+        }
+        
+        const account = result.rows[0];
+        
+        // Actualizar contadores
+        await pool.query(`
+            UPDATE sender_accounts 
+            SET 
+                emails_sent_today = emails_sent_today + 1,
+                total_sent = total_sent + 1,
+                last_email_sent = NOW(),
+                last_used_at = NOW()
+            WHERE id = $1
+        `, [account.id]);
+        
+        console.log(`✅ Selected sender account: ${account.email}`);
+        
+        res.json({
+            success: true,
+            account: {
+                id: account.id,
+                email: account.email,
+                smtp_host: account.smtp_host,
+                smtp_port: account.smtp_port,
+                smtp_username: account.smtp_username,
+                smtp_password: account.smtp_password,
+                signature: account.signature,
+                tracking_domain: account.tracking_domain
+            }
+        });
+    } catch (error) {
+        console.error('Error getting next sender:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET: Estadísticas de las cuentas
+app.get('/api/sender-accounts/stats', async (req, res) => {
+    try {
+        const stats = await pool.query(`
+            SELECT 
+                COUNT(*) as total_accounts,
+                SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active_accounts,
+                SUM(CASE WHEN is_primary THEN 1 ELSE 0 END) as primary_accounts,
+                SUM(daily_limit) as total_daily_capacity,
+                SUM(emails_sent_today) as sent_today,
+                SUM(total_sent) as total_sent_all_time,
+                ROUND(AVG(emails_sent_today)::numeric, 2) as avg_sent_today
+            FROM sender_accounts
+        `);
+        
+        const usage = await pool.query(`
+            SELECT 
+                email,
+                daily_limit,
+                emails_sent_today,
+                ROUND((emails_sent_today::numeric / NULLIF(daily_limit, 0) * 100), 2) as usage_percent,
+                last_email_sent
+            FROM sender_accounts
+            WHERE is_active = true
+            ORDER BY emails_sent_today DESC
+        `);
+        
+        res.json({
+            success: true,
+            stats: stats.rows[0],
+            usage: usage.rows
+        });
+    } catch (error) {
+        console.error('Error fetching sender stats:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST: Reset daily counters (manual)
+app.post('/api/sender-accounts/reset-counters', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            UPDATE sender_accounts 
+            SET emails_sent_today = 0
+            WHERE DATE(last_email_sent) < CURRENT_DATE
+            OR last_email_sent IS NULL
+            RETURNING *
+        `);
+        
+        console.log(`✅ Reset ${result.rowCount} sender account counters`);
+        
+        res.json({
+            success: true,
+            message: 'Daily counters reset successfully',
+            resetCount: result.rowCount
+        });
+    } catch (error) {
+        console.error('Error resetting counters:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// CRON JOB: Reset automático diario a las 00:00
+cron.schedule('0 0 * * *', async () => {
+    try {
+        console.log('🔄 [CRON] Resetting daily email counters...');
+        const result = await pool.query(`
+            UPDATE sender_accounts 
+            SET emails_sent_today = 0
+            WHERE DATE(last_email_sent) < CURRENT_DATE
+        `);
+        console.log(`✅ [CRON] Reset ${result.rowCount} sender accounts`);
+    } catch (error) {
+        console.error('❌ [CRON] Error resetting daily counters:', error);
+    }
+});
+
+console.log('✅ Sender Accounts endpoints initialized');
+console.log('🔄 Daily counter reset scheduled (00:00)');
+
+console.log('✅ Sender Accounts endpoints initialized');
         
         
         app.listen(PORT, () => {
@@ -5014,6 +5938,227 @@ console.log('  5. ✅ Individual prospect control (pause/resume/remove)');
 console.log('  6. ✅ No automatic email sending (manual control only)');
 console.log('');
 
+
+
+
+
+// ========================================
+// CÓDIGO PARA AGREGAR AL SERVER.JS
+// Agregar ANTES de la línea "startServer();" (línea 5017)
+// ========================================
+
+// ========================================
+// ENDPOINTS PARA CORREGIR LEADS SIN INDUSTRY
+// ========================================
+
+// Endpoint para corregir leads sin industry
+app.post('/api/fix-missing-industries', async (req, res) => {
+    try {
+        console.log('🔧 Starting to fix leads with missing industry...');
+        
+        const { industry, timeframe = '24' } = req.body; // timeframe en horas
+        
+        if (!industry) {
+            return res.status(400).json({
+                success: false,
+                error: 'Industry parameter is required'
+            });
+        }
+        
+        // Buscar leads recientes de ScraperCity sin industry
+        const query = `
+            UPDATE leads 
+            SET industry = $1, updated_at = NOW()
+            WHERE source LIKE '%scrapercity%'
+            AND created_at > NOW() - INTERVAL '${parseInt(timeframe)} hours'
+            AND (industry IS NULL OR industry = '' OR industry = '[]' OR industry = 'null')
+            RETURNING id, name, email, industry;
+        `;
+        
+        const result = await pool.query(query, [industry]);
+        
+        console.log(`✅ Fixed ${result.rowCount} leads with industry: ${industry}`);
+        
+        // Log algunos ejemplos
+        if (result.rows.length > 0) {
+            console.log('📋 Sample fixed leads:');
+            result.rows.slice(0, 5).forEach(lead => {
+                console.log(`  - ${lead.name} (${lead.email}): industry set to "${lead.industry}"`);
+            });
+        }
+        
+        res.json({
+            success: true,
+            fixed: result.rowCount,
+            industry: industry,
+            samples: result.rows.slice(0, 10),
+            message: `Successfully updated ${result.rowCount} leads with industry "${industry}"`
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fixing industries:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Endpoint para obtener estadísticas de leads sin industry
+app.get('/api/leads-without-industry', async (req, res) => {
+    try {
+        const { timeframe = '24' } = req.query; // timeframe en horas
+        
+        const query = `
+            SELECT 
+                COUNT(*) as total,
+                source,
+                created_at::date as date
+            FROM leads 
+            WHERE (industry IS NULL OR industry = '' OR industry = '[]' OR industry = 'null')
+            AND created_at > NOW() - INTERVAL '${parseInt(timeframe)} hours'
+            GROUP BY source, created_at::date
+            ORDER BY created_at::date DESC;
+        `;
+        
+        const result = await pool.query(query);
+        
+        const totalQuery = `
+            SELECT COUNT(*) as total
+            FROM leads 
+            WHERE (industry IS NULL OR industry = '' OR industry = '[]' OR industry = 'null')
+            AND created_at > NOW() - INTERVAL '${parseInt(timeframe)} hours';
+        `;
+        
+        const totalResult = await pool.query(totalQuery);
+        
+        res.json({
+            success: true,
+            total: parseInt(totalResult.rows[0].total),
+            breakdown: result.rows,
+            timeframe: `${timeframe} hours`
+        });
+        
+    } catch (error) {
+        console.error('❌ Error getting stats:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+
+
+// ============================================
+// PEGAR ESTO EN SERVER.JS - ANTES DE startServer();
+// ============================================
+
+// ENDPOINT 1: Prospects con filtro de último batch
+app.get('/api/prospects', async (req, res) => {
+    try {
+        const { filter = 'all', limit = 500 } = req.query;
+        
+        let query;
+        let params = [];
+        
+        // FILTRO ESPECIAL: Último batch
+        if (filter === 'last_batch') {
+            const lastRunQuery = `
+                SELECT run_id, search_query, created_at
+                FROM scraper_runs
+                WHERE status = 'completed'
+                ORDER BY completed_at DESC
+                LIMIT 1;
+            `;
+            
+            const lastRun = await pool.query(lastRunQuery);
+            
+            if (lastRun.rows.length === 0) {
+                return res.json({ success: false, prospects: [] });
+            }
+            
+            const runId = lastRun.rows[0].run_id;
+            
+            query = `
+                SELECT l.*
+                FROM leads l
+                WHERE l.scraper_run_id = $1
+                ORDER BY l.created_at DESC
+                LIMIT ${limit};
+            `;
+            params = [runId];
+            
+        } else {
+            // Filtros normales
+            query = `SELECT * FROM leads ORDER BY created_at DESC LIMIT ${limit}`;
+        }
+        
+        const result = await pool.query(query, params);
+        
+        res.json({
+            success: true,
+            prospects: result.rows,
+            total: result.rows.length
+        });
+        
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ENDPOINT 2: Info del último run
+app.get('/api/scrapercity/last-run', async (req, res) => {
+    try {
+        const query = `
+            SELECT run_id, search_query, leads_count, created_at
+            FROM scraper_runs
+            WHERE status = 'completed'
+            ORDER BY completed_at DESC
+            LIMIT 1;
+        `;
+        
+        const result = await pool.query(query);
+        
+        res.json({
+            success: true,
+            run: result.rows[0] || null,
+            total_leads: result.rows[0]?.leads_count || 0
+        });
+        
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
+});
+
+// ENDPOINT 3: Agregar batch a secuencia
+app.post('/api/sequences/add-batch', async (req, res) => {
+    try {
+        const { lead_ids, sequence_name } = req.body;
+        
+        const sequenceId = `seq_${Date.now()}`;
+        
+        await pool.query(`
+            UPDATE leads
+            SET sequence_id = $1, email_sequence_status = 'pending'
+            WHERE id = ANY($2::int[])
+        `, [sequenceId, lead_ids]);
+        
+        res.json({ success: true });
+        
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
+});
+
+
+
+
+console.log('✅ Industry fix endpoints registered:');
+console.log('  POST /api/fix-missing-industries - Fix leads without industry');
+console.log('  GET  /api/leads-without-industry - Get stats of leads without industry');
+console.log('');
 // Start the server
 startServer();
 // Initialize templates table

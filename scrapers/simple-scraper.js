@@ -8,7 +8,7 @@ class SimpleLeadGenerator {
         
         // Priority industries with sample high-revenue leads
         this.priorityIndustries = [
-            'Construction',
+            'construction',
             'Legal industry', 
             'Manufacturing',
             'Car dealerships',
@@ -23,9 +23,9 @@ class SimpleLeadGenerator {
     // Generate sample leads based on priority industries
     generateSampleLeads() {
         const sampleLeads = [
-            // Construction
-            { name: "Mike Johnson", title: "CEO", company: "Johnson Construction LLC", industry: "Construction", estimated_revenue: 180000, location: "Dallas, TX", email: "mike@johnsonconstruction.com" },
-            { name: "Sarah Davis", title: "Owner", company: "Davis Building Group", industry: "Construction", estimated_revenue: 220000, location: "Phoenix, AZ", email: "sarah@davisbuildinggroup.com" },
+            // construction
+            { name: "Mike Johnson", title: "CEO", company: "Johnson construction LLC", industry: "construction", estimated_revenue: 180000, location: "Dallas, TX", email: "mike@johnsonconstruction.com" },
+            { name: "Sarah Davis", title: "Owner", company: "Davis Building Group", industry: "construction", estimated_revenue: 220000, location: "Phoenix, AZ", email: "sarah@davisbuildinggroup.com" },
             
             // Legal
             { name: "Robert Martinez", title: "Partner", company: "Martinez & Associates Law", industry: "Legal industry", estimated_revenue: 290000, location: "Miami, FL", email: "robert@martinezlaw.com" },
